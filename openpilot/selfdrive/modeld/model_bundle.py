@@ -16,6 +16,7 @@ Precedence used by modeld:
 from __future__ import annotations
 
 import os
+import pickle
 from pathlib import Path
 
 MODELS_DIR = Path(__file__).resolve().parent / "models"
@@ -239,6 +240,19 @@ def bundle_mode(path: Path) -> str | None:
 
 def is_bundle(path: Path) -> bool:
   return bundle_mode(path) is not None
+
+
+def bundle_is_stateful(name: str) -> bool:
+  """True when the merged bundle is a stateful generic export (has a new_img input).
+
+  A stateful bundle needs stateful_model_state, not modeld_bigcombo; both share
+  the metadata+plan layout, so the metadata inputs are what tells them apart.
+  """
+  try:
+    with (bundle_dir(name) / MERGED_REQUIRED_FILES[0]).open("rb") as f:
+      return "new_img" in pickle.load(f).get("input_shapes", {})
+  except (OSError, ValueError, pickle.UnpicklingError):
+    return False
 
 
 def list_bundles() -> list[dict]:

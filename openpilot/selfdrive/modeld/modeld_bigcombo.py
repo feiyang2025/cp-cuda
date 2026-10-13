@@ -96,6 +96,7 @@ from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import (fill_model_msg, fill_pose_msg, fill_driving_model_data,
                                                        get_action_from_plan, PublishState)
 from openpilot.selfdrive.modeld.constants import ModelConstants
+from openpilot.selfdrive.modeld import model_bundle
 from openpilot.selfdrive.modeld.camera_sync import MAX_FRAME_SKEW, TOLERANCE_NS, receive_camera_pair
 from openpilot.selfdrive.modeld.gpu_state import (SOURCE_BIG, mark_inference_active,
                                                   publish_gpu_state, republish_gpu_state)
@@ -420,7 +421,12 @@ def main(demo=False, model_name: str | None = None):
     cl_context = CLContext()
   cloudlog.warning("[BigCombo] loading model (CUDA/TensorRT path)")
   try:
-    model = ModelState(cl_context, model_name)
+    if model_bundle.bundle_is_stateful(model_name or "BigCombo"):
+      from openpilot.selfdrive.modeld.stateful_model_state import StatefulModelState
+      model = StatefulModelState(bundle_dir=model_bundle.bundle_dir(model_name or "BigCombo"))
+      cloudlog.warning("[BigCombo] using StatefulModelState (stateful cinque engine)")
+    else:
+      model = ModelState(cl_context, model_name)
   except BigComboTrtUnavailable as e:
     # 降级闭环: 合并引擎 TRT 不可用 → 直接向上抛, 由 modeld.py 在同一进程内回落
     # 小模型 bundle 并落"大模型失败"标记。旧版写 Params("Model") 在这棵树里没有

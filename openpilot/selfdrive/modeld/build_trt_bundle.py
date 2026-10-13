@@ -1,18 +1,21 @@
-"""Compile a stateless fused big-model ONNX into a local TensorRT bundle.
+"""Compile a big-model ONNX into a local TensorRT bundle.
 
 Produces, inside <bundle>:
     big_driving_supercombo_metadata.pkl   input/output shapes + output slices
     driving_supercombo_fp16.plan          fp16 TensorRT engine
 
-That is the layout modeld_bigcombo loads. Only the stateless fused family is
-supported - the fused ONNX takes img/big_img/desire_pulse/traffic_convention/
-action_t/features_buffer and returns one flat `outputs` tensor. The newer
-"stateful generic" exports (state_* in, next_state_* out) are AMD-runtime only
-and are rejected by generic_model_runtime on this branch.
+Two families are supported, told apart by the graph inputs:
 
-The ONNX is patched before parsing (jetlink's onnx_patch): TensorRT rejects the
-UINT8 image inputs, so they are redeclared FP16 with the head Cast removed.
-Feeding 0..255 as fp16 is exact; the original file is never modified.
+  * stateless fused - img/big_img/desire_pulse/traffic_convention/action_t/
+    features_buffer in, one flat `outputs` out. modeld_bigcombo loads these.
+  * stateful generic (cinque) - new_img/desire/traffic_convention/action_t plus
+    state_* in, `outputs` + next_state_* out. stateful_model_state loads these.
+
+The ONNX is patched before parsing because TensorRT rejects UINT8 graph I/O:
+  * fused: image inputs redeclared FP16 with the head Cast removed (jetlink patch);
+  * stateful: the uint8 tensors (new_img / state_img_q / next_state_img_q) are
+    retyped FP16 (0..255 is exact; the graph's own Casts stay).
+The original file is never modified.
 
 TensorRT ships with JetPack in the system dist-packages, which is not on the
 venv path, so it is imported explicitly here. onnx is not on the venv path
@@ -27,8 +30,8 @@ import sys
 import time
 from pathlib import Path
 
-# Stateful generic exports are not usable here; see the module docstring.
 FUSED_REQUIRED_INPUTS = ("img", "big_img", "desire_pulse", "traffic_convention", "action_t", "features_buffer")
+STATEFUL_MARKER_INPUT = "new_img"  # present only in the stateful generic export
 METADATA_NAME = "big_driving_supercombo_metadata.pkl"
 PLAN_NAME = "driving_supercombo_fp16.plan"
 PATCHED_ONNX_NAME = "big_driving_supercombo.patched.onnx"
@@ -61,8 +64,41 @@ def _import_patch_file():
   return patch_file
 
 
-def patch_onnx(onnx_path: Path, out_path: Path, *, progress=None, force: bool = False) -> Path:
-  """Write a TensorRT-parseable copy of a fused ONNX next to the original.
+def _import_onnx():
+  """The `onnx` package, from wherever it exists on this box (see _FALLBACK)."""
+  candidates = (os.environ.get("OPENPILOT_ONNX_PATH"), *_FALLBACK_ONNX_PATHS, *_SYSTEM_DIST_PACKAGES)
+  for path in candidates:
+    if path and path not in sys.path and Path(path).is_dir():
+      sys.path.append(path)
+  import onnx
+  return onnx
+
+
+def patch_onnx_stateful(onnx_path: Path, out_path: Path, *, progress=None) -> int:
+  """Retype the model's UINT8 tensors to FP16 so TensorRT accepts the graph.
+
+  The stateful cinque export carries a uint8 image input and a uint8 image state
+  (new_img / state_img_q / next_state_img_q); TensorRT rejects uint8 graph I/O.
+  0..255 is exact in fp16, so a plain retype suffices - the graph's own Casts
+  keep working.
+  """
+  onnx = _import_onnx()
+  from onnx import TensorProto
+  model = onnx.load(str(onnx_path), load_external_data=False)
+  changed = 0
+  for vi in list(model.graph.input) + list(model.graph.output) + list(model.graph.value_info):
+    if vi.type.tensor_type.elem_type == TensorProto.UINT8:
+      vi.type.tensor_type.elem_type = TensorProto.FLOAT16
+      changed += 1
+  onnx.save(model, str(out_path))
+  if progress:
+    progress(f"retyped {changed} uint8 tensors to fp16")
+  return changed
+
+
+def patch_onnx(onnx_path: Path, out_path: Path, *, stateful: bool = False,
+               progress=None, force: bool = False) -> Path:
+  """Write a TensorRT-parseable copy of an ONNX next to the original.
 
   Reuses an existing copy that is at least as new as the source: patching a
   ~766 MB file is minutes of I/O, and rerunning the build should not redo it.
@@ -71,10 +107,15 @@ def patch_onnx(onnx_path: Path, out_path: Path, *, progress=None, force: bool = 
     if progress:
       progress(f"reusing patched copy: {out_path.name} ({out_path.stat().st_size / 1e6:.1f} MB)")
     return out_path
-  if progress:
-    progress(f"patching {onnx_path.name} for TensorRT (uint8 image inputs -> fp16)")
-  patch_file = _import_patch_file()
-  patch_file(str(onnx_path), str(out_path), check=False)
+  if stateful:
+    if progress:
+      progress(f"patching {onnx_path.name} for TensorRT (stateful: uint8 tensors -> fp16)")
+    patch_onnx_stateful(onnx_path, out_path, progress=progress)
+  else:
+    if progress:
+      progress(f"patching {onnx_path.name} for TensorRT (uint8 image inputs -> fp16)")
+    patch_file = _import_patch_file()
+    patch_file(str(onnx_path), str(out_path), check=False)
   if progress:
     progress(f"patched copy: {out_path.name} ({out_path.stat().st_size / 1e6:.1f} MB)")
   return out_path
@@ -85,9 +126,11 @@ def write_metadata(onnx_path: Path, bundle: Path) -> Path:
   from openpilot.selfdrive.modeld.get_model_metadata import make_metadata_dict
 
   meta = make_metadata_dict(str(onnx_path))
-  missing = [k for k in FUSED_REQUIRED_INPUTS if k not in meta["input_shapes"]]
-  if missing:
-    raise ValueError(f"not a stateless fused model: missing inputs {missing} (got {sorted(meta['input_shapes'])})")
+  names = set(meta["input_shapes"])
+  if not (set(FUSED_REQUIRED_INPUTS) <= names or STATEFUL_MARKER_INPUT in names):
+    raise ValueError(
+      f"unsupported model inputs {sorted(names)}; expected fused {FUSED_REQUIRED_INPUTS} or a "
+      f"stateful export with {STATEFUL_MARKER_INPUT!r}")
   out = bundle / METADATA_NAME
   out.parent.mkdir(parents=True, exist_ok=True)
   with out.open("wb") as f:
@@ -136,19 +179,20 @@ def compile_bundle(bundle_dir: str | Path, onnx_path: str | Path | None = None,
     raise FileNotFoundError(onnx)
 
   metadata = write_metadata(onnx, bundle)
+  stateful = STATEFUL_MARKER_INPUT in pickle.loads(metadata.read_bytes())["input_shapes"]
   if progress:
-    progress(f"metadata written: {metadata.name}")
+    progress(f"metadata written: {metadata.name} ({'stateful' if stateful else 'fused'})")
 
   # The metadata comes from the original file; only the engine build needs the
   # TensorRT-friendly copy.
-  patched = patch_onnx(onnx, bundle / PATCHED_ONNX_NAME, progress=progress)
+  patched = patch_onnx(onnx, bundle / PATCHED_ONNX_NAME, stateful=stateful, progress=progress)
   try:
     plan = build_engine(patched, bundle / PLAN_NAME, fp16=fp16, progress=progress)
   finally:
     if not keep_patched:
       patched.unlink(missing_ok=True)
   return {"bundle": str(bundle), "metadata": str(metadata), "plan": str(plan),
-          "plan_bytes": plan.stat().st_size}
+          "plan_bytes": plan.stat().st_size, "stateful": stateful}
 
 
 def main() -> int:
