@@ -13,6 +13,7 @@ GLYPH_PADDING = 6
 EXTRA_CHARS = "–‑✓×°§•X⚙✕◀▶✔⌫⇧␣○●↳çêüñ–‑✓×°§•€£¥"
 UNIFONT_LANGUAGES = {"th", "zh-CHT", "zh-CHS", "ko", "ja"}
 KR_FONTS = {"KaiGenGothicKR-Bold"}
+CJK_FONTS = {"OpenpilotCJK-Regular"}
 
 def _languages():
   if not LANGUAGES_FILE.exists():
@@ -26,6 +27,16 @@ def _char_sets():
   unifont = set(base)
 
   unifont.update(map(chr, range(0xAC00, 0xD7A4)))
+  # Characters the UI draws that are not required to appear in any .po text, so
+  # the .po-driven charset below would miss them: the localized weekday letters
+  # in the date line (日一二三四五六) are built in code, not translated.
+  unifont.update("日一二三四五六")
+  # The Chinese fallback font is CJK-only (no Hangul): every .po file plus the
+  # built-in weekday letters, so it is a superset of what any translated string
+  # can need.
+  cjk = set(base) | set("日一二三四五六")
+  for po_cjk in TRANSLATIONS_DIR.glob("app_*.po"):
+    cjk.update(po_cjk.read_text(encoding="utf-8"))
   for language, code in _languages().items():
     unifont.update(language)
     po_path = TRANSLATIONS_DIR / f"app_{code}.po"
@@ -35,7 +46,9 @@ def _char_sets():
       continue
     (unifont if code in UNIFONT_LANGUAGES else base).update(chars)
 
-  return tuple(sorted(ord(c) for c in base)), tuple(sorted(ord(c) for c in unifont))
+  return (tuple(sorted(ord(c) for c in base)),
+          tuple(sorted(ord(c) for c in unifont)),
+          tuple(sorted(ord(c) for c in cjk)))
 
 
 def _glyph_metrics(glyphs, rects, glyph_count: int):
@@ -100,7 +113,7 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
     font_size = 16
     padding = GLYPH_PADDING
 
-  if font_path.stem in KR_FONTS:
+  if font_path.stem in KR_FONTS or font_path.stem in CJK_FONTS:
     font_size = 48
     padding = 2
     
@@ -133,12 +146,17 @@ def _process_font(font_path: Path, codepoints: tuple[int, ...]):
 
 
 def main():
-  base_cp, unifont_cp = _char_sets()
+  base_cp, unifont_cp, cjk_cp = _char_sets()
   fonts = sorted(FONT_DIR.glob("*.ttf")) + sorted(FONT_DIR.glob("*.otf"))
   for font in fonts:
     if "emoji" in font.name.lower():
       continue
-    glyphs = unifont_cp if font.stem.lower().startswith("unifont") or font.stem in KR_FONTS else base_cp
+    if font.stem in CJK_FONTS:
+      glyphs = cjk_cp
+    elif font.stem.lower().startswith("unifont") or font.stem in KR_FONTS:
+      glyphs = unifont_cp
+    else:
+      glyphs = base_cp
     _process_font(font, glyphs)
   return 0
 
