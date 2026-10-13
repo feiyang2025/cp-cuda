@@ -1,0 +1,28 @@
+openpilot/selfdrive/modeld/models/*.onnx
+openpilot/selfdrive/modeld/models/big_driving_*
+openpilot/selfdrive/modeld/models/.big_model_build_stamp
+amapnavi_bak
+amapnavi_bak/
+
+# scons dependency build dir (shapely wheels etc)
+pydeps/
+
+# --- cp-cuda snapshot: runtime model bundles/engines (downloaded or built per device) ---
+openpilot/selfdrive/modeld/models/*/
+openpilot/selfdrive/modeld/models/*.plan
+openpilot/selfdrive/modeld/models/.*
+
+# --- cp-cuda snapshot: build outputs / caches ---
+*.o
+*.a
+*.pyc
+__pycache__/
+.sconsign.dblite*
+compile_commands.json
+.ruff_cache/
+.pytest_cache/
+
+# --- cp-cuda snapshot: local launcher backups ---
+*.bak
+*.bak2
+launch_*.before_*
