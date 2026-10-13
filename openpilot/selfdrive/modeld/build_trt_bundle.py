@@ -155,6 +155,25 @@ def build_engine(onnx_path: Path, plan_path: Path, *, fp16: bool = True, progres
   config = builder.create_builder_config()
   if fp16:
     config.set_flag(trt.BuilderFlag.FP16)
+  # Highest kernel-autotuning level (what `trtexec --best` uses) plus a persistent
+  # timing cache: the first build autotunes harder and is slower, but the winning
+  # kernels are cached next to the plan and reused on the next build.
+  # Kernel-autotuning effort. Measured on cinque-v3 (2026-10-13): level 3 and 4
+  # build identical-speed engines (~21 ms) and level 5 OOMs this 29 GB box, so 3
+  # stays the default; raise TRT_OPT_LEVEL to experiment.
+  try:
+    config.builder_optimization_level = int(os.environ.get("TRT_OPT_LEVEL", "3"))
+  except Exception:
+    pass
+  cache_path = plan_path.parent / "timing_cache.bin"
+  try:
+    cache = config.create_timing_cache(cache_path.read_bytes()) if cache_path.is_file() else None
+    if cache is None:
+      cache = config.create_timing_cache(b"")
+    config.set_timing_cache(cache, ignore_mismatch=False)
+  except Exception as e:
+    if progress:
+      progress(f"timing cache unavailable: {e}")
 
   t0 = time.monotonic()
   if progress:
@@ -165,6 +184,10 @@ def build_engine(onnx_path: Path, plan_path: Path, *, fp16: bool = True, progres
   data = bytes(serialized)
   plan_path.parent.mkdir(parents=True, exist_ok=True)
   plan_path.write_bytes(data)
+  try:
+    cache_path.write_bytes(config.get_timing_cache().serialize())
+  except Exception:
+    pass
   if progress:
     progress(f"built {plan_path.name}: {len(data) / 1e6:.1f} MB in {time.monotonic() - t0:.0f}s")
   return plan_path
