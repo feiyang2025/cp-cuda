@@ -96,6 +96,7 @@ from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import (fill_model_msg, fill_pose_msg, fill_driving_model_data,
                                                        get_action_from_plan, PublishState)
 from openpilot.selfdrive.modeld.constants import ModelConstants
+from openpilot.selfdrive.modeld.camera_sync import MAX_FRAME_SKEW, TOLERANCE_NS, receive_camera_pair
 from openpilot.selfdrive.modeld.gpu_state import (SOURCE_BIG, mark_inference_active,
                                                   publish_gpu_state, republish_gpu_state)
 
@@ -107,33 +108,21 @@ LONG_SMOOTH_SECONDS = 0.3
 
 DEFAULT_MODEL_DIR = Path(__file__).parent / 'models'
 
-# ── 2580-dim merged output layout (verified vs ONNX official output_slices, 2026-09-02) ──
-VISION_SLICES = {
-  'lane_lines': slice(0, 528),
-  'lane_lines_prob': slice(528, 536),
-  'road_edges': slice(536, 800),
-  'meta': slice(800, 855),
-  'desire_pred': slice(855, 887),
-  'pose': slice(887, 899),
-  'wide_from_device_euler': slice(899, 905),
-  'road_transform': slice(905, 917),
-  # parse_vision_outputs 还要读 lead / lead_prob (本版解析器把 lead 归在 vision 阶段);
-  # 范围与 POLICY_SLICES 里的一致, 同一个 2580 数组切两次互不影响。
-  'lead': slice(1907, 2051),
-  'lead_prob': slice(2051, 2054),
-}
-POLICY_SLICES = {
-  'plan': slice(917, 1907),
-  'lane_lines': slice(0, 528),
-  'lane_lines_prob': slice(528, 536),
-  'road_edges': slice(536, 800),
-  'lead': slice(1907, 2051),
-  'lead_prob': slice(2051, 2054),
-  'desire_state': slice(2054, 2062),
-  'action': slice(2062, 2066),
-  'hidden_state': slice(2066, 2578),
-  'pad': slice(2578, 2580),
-}
+# Names of the merged-output segments the parser reads, in the order it consumes
+# them. The slice RANGES are model-specific and come from the bundle's
+# output_slices metadata (BigCombo 2580, TGC/CTM 18452, ...), so nothing here is
+# tied to one checkpoint's width.
+VISION_KEYS = (
+  'lane_lines', 'lane_lines_prob', 'road_edges', 'meta', 'desire_pred', 'pose',
+  'wide_from_device_euler', 'road_transform',
+  # parse_vision_outputs also reads lead / lead_prob (this parser bills lead to
+  # the vision stage); the same array is sliced twice with no effect.
+  'lead', 'lead_prob',
+)
+POLICY_KEYS = (
+  'plan', 'lane_lines', 'lane_lines_prob', 'road_edges', 'lead', 'lead_prob',
+  'desire_state', 'action', 'hidden_state', 'pad',
+)
 # Output width is read from the bundle metadata: the fused family has several
 # checkpoints (BigCombo 2580, TGC/CTM 18452, ...) and a hardcoded width would
 # reject every one of them.
@@ -193,7 +182,7 @@ class ModelState:
     with open(metadata_path, 'rb') as f:
       metadata = pickle.load(f)
       self.input_shapes = metadata['input_shapes']
-      self.output_slices = metadata['output_slices']  # official; values match VISION/POLICY_SLICES above
+      self.output_slices = metadata['output_slices']  # the slice ranges VISION_KEYS/POLICY_KEYS address
       output_size = metadata['output_shapes']['outputs'][1]
     assert output_size > 0, f'bad fused model output size {output_size}'
     self.output_total = output_size
@@ -385,17 +374,13 @@ class ModelState:
     assert self.output.size == self.output_total and np.isfinite(self.output).all(), "[BigCombo] output diverged"
 
     # ── Parse: vision slices first, then policy slices independently (merged-array rule) ──
-    vision_outs = {k: self.output[v][np.newaxis] for k, v in VISION_SLICES.items()}
-    policy_outs = {k: self.output[v][np.newaxis] for k, v in POLICY_SLICES.items()}
-    # hidden_state 宽度随模型变 (BigCombo 512, TGC 16384): metadata 切片才是权威,
-    # 用它覆盖写死的 BigCombo 尺寸 (pad 同理)。
-    for _name in ('hidden_state', 'pad'):
-      _sl = self.output_slices.get(_name)
-      if _sl is not None:
-        policy_outs[_name] = self.output[_sl][np.newaxis]
+    # Slice ranges come from the bundle metadata, so a wider model (TGC/CTM 18452)
+    # needs no code change.
+    vision_outs = {k: self.output[self.output_slices[k]][np.newaxis] for k in VISION_KEYS if k in self.output_slices}
+    policy_outs = {k: self.output[self.output_slices[k]][np.newaxis] for k in POLICY_KEYS if k in self.output_slices}
     vision_dict = self.parser.parse_vision_outputs(vision_outs)
     policy_dict = self.parser.parse_policy_outputs(policy_outs)
-    # 注意合并顺序: POLICY_SLICES 里冗余带了 lane_lines/lane_lines_prob/road_edges(与 vision 重叠),
+    # 注意合并顺序: POLICY_KEYS 里冗余带了 lane_lines/lane_lines_prob/road_edges(与 vision 重叠),
     # 而 parse_policy_outputs 只解析 plan/desire_state → policy 侧这些键仍是 1-D 原始切片,
     # 若 policy 覆盖 vision 会把解析好的 4-D 车道线打回 2-D, fill_model_msg 随即 IndexError。
     # 因此让"已解析的 vision 结果"最后合并(获胜); hidden_state/action/pad 是 policy 独有, 不受影响。
@@ -444,6 +429,7 @@ def main(demo=False, model_name: str | None = None):
     print(f"[WARN] [BigCombo] TRT unavailable: {e}")
     raise
   cloudlog.warning("[BigCombo] models loaded, modeld starting")
+  cloudlog.warning(f"[BigCombo] camera pairing: frame_id-primary via camera_sync (K={MAX_FRAME_SKEW}, T={TOLERANCE_NS // 1_000_000}ms)")
 
   # visionipc clients (same as modeld.py)
   while True:
@@ -518,27 +504,13 @@ def main(demo=False, model_name: str | None = None):
       # usbgpu_present() shells into tinygrad, so keep it off the per-frame path.
       republish_gpu_state(params, inference_active)
 
-    buf_main = vipc_client_main.recv()
-    meta_main = FrameMeta(vipc_client_main)
-    if buf_main is None:
-      cloudlog.debug("vipc_client_main no frame")
+    # Pair road/wide by frame id (bounded by exposure time); None = give up this
+    # round rather than mispair. See camera_sync for the measured thresholds.
+    pair = receive_camera_pair(vipc_client_main, vipc_client_extra if use_extra_client else None)
+    if pair is None:
+      cloudlog.debug("[BigCombo] no camera pair")
       continue
-
-    if use_extra_client:
-      buf_extra = vipc_client_extra.recv()
-      meta_extra = FrameMeta(vipc_client_extra)
-      if buf_extra is None:
-        cloudlog.debug("vipc_client_extra no frame")
-        continue
-      # Decoupled FrameSync: ±1 skew is steady state; >1 is an anomaly
-      if meta_main.frame_id != meta_extra.frame_id:
-        if abs(meta_main.frame_id - meta_extra.frame_id) > 1:
-          cloudlog.warning(f"[BigCombo] frame_id mismatch (anomaly): main={meta_main.frame_id} extra={meta_extra.frame_id}")
-        else:
-          cloudlog.debug(f"[BigCombo] frame_id skew 1 (steady state): main={meta_main.frame_id} extra={meta_extra.frame_id}")
-    else:
-      buf_extra = buf_main
-      meta_extra = meta_main
+    buf_main, meta_main, buf_extra, meta_extra = pair
 
     sm.update(0)
     desire = DH.desire

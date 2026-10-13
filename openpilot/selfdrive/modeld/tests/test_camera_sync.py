@@ -29,15 +29,40 @@ def test_alternating_exposure_intervals_do_not_drop_valid_pairs():
     assert buf.frame_id == meta.frame_id == wide.frame_id == wide_meta.frame_id == i
 
 
-def test_current_pair_resync_advances_only_older_camera():
-  main = Camera([(10, 100_000_000), (11, 150_000_000)])
-  extra = Camera([(20, 50_000_000), (21, 150_000_000)])
+def test_decoupled_wide_lag_is_a_valid_pair():
+  # Measured steady state: wide trails road by one id while its exposure is tens
+  # of ms off. The time gate is loose enough to accept it.
+  main = Camera([(11, 150_000_000)])
+  extra = Camera([(10, 50_000_000)])
   _, meta, _, wide_meta = receive_camera_pair(main, extra)
-  assert meta.frame_id == 11 and wide_meta.frame_id == 21
+  assert meta.frame_id == 11 and wide_meta.frame_id == 10
+
+
+def test_resync_advances_only_the_older_camera():
+  # extra starts 250 ms behind: it is advanced, then road joins on id.
+  main = Camera([(10, 300_000_000), (11, 350_000_000)])
+  extra = Camera([(10, 50_000_000), (11, 350_000_000)])
+  _, meta, _, wide_meta = receive_camera_pair(main, extra)
+  assert meta.frame_id == 10 and wide_meta.frame_id == 11
+
+
+def test_frame_id_gate_rejects_and_advances_a_sequence_mismatch():
+  # Same exposure moment but a far-off sequence position: timestamp alone would
+  # pair these, the frame-id gate refuses and the lagging stream is advanced.
+  main = Camera([(10, 100_000_000)])
+  extra = Camera([(99, 100_000_000)])
+  assert receive_camera_pair(main, extra) is None
+
+
+def test_time_gate_still_rejects_beyond_tolerance():
+  # Frame ids agree but the exposures are more than a frame apart: not a pair.
+  main = Camera([(10, 100_000_000)])
+  extra = Camera([(10, 300_000_000)])
+  assert receive_camera_pair(main, extra) is None
 
 
 def test_timeout_never_reuses_a_stale_buffer():
-  main = Camera([(0, 100_000_000)])
+  main = Camera([(0, 300_000_000)])
   extra = Camera([(0, 0)])
   assert receive_camera_pair(main, extra) is None
   assert receive_camera_pair(main, extra) is None
@@ -50,8 +75,20 @@ def test_single_camera_accepts_each_new_frame():
     assert buf is extra and meta is extra_meta and meta.frame_id == i
 
 
-def test_resync_is_bounded_even_if_timestamps_never_match():
-  main = Camera((i, i * 100_000_000) for i in range(100))
-  extra = Camera((i, i * 100_000_000 + 50_000_000) for i in range(100))
+def test_resync_is_bounded_when_no_pair_is_ever_possible():
+  # Ids never line up (always 10 apart), so pairing must give up instead of
+  # draining the streams.
+  class Counting(Camera):
+    def __init__(self, frames):
+      super().__init__(frames)
+      self.calls = 0
+
+    def recv(self):
+      self.calls += 1
+      return super().recv()
+
+  main = Counting((i, i * 300_000_000) for i in range(100))
+  extra = Counting((i + 10, i * 300_000_000 + 250_000_000) for i in range(100))
   assert receive_camera_pair(main, extra) is None
-  assert main.frame_id + extra.frame_id <= 10
+  # one initial recv per camera plus at most max_tries advances
+  assert main.calls + extra.calls <= 2 + 10

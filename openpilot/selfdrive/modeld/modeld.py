@@ -61,6 +61,7 @@ from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import (fill_model_msg, fill_pose_msg, fill_driving_model_data,
                                                        get_action_from_plan, PublishState)
 from openpilot.selfdrive.modeld import model_bundle
+from openpilot.selfdrive.modeld.camera_sync import MAX_FRAME_SKEW, TOLERANCE_NS, receive_camera_pair
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
 from openpilot.selfdrive.modeld.gpu_state import (SOURCE_SMALL, mark_inference_active,
                                                   publish_gpu_state, republish_gpu_state)
@@ -557,6 +558,7 @@ def main(demo=False):
   cloudlog.warning("loading model (CUDA/TensorRT path)")
   model = _load_usable_model(cl_context)
   cloudlog.warning(f"models loaded, modeld starting: bundle={model.model_dir.name}")
+  cloudlog.warning(f"camera pairing: frame_id-primary via camera_sync (K={MAX_FRAME_SKEW}, T={TOLERANCE_NS // 1_000_000}ms)")
   cloudlog.warning(f"backend: vision_trt={model.use_trt} policy_trt={model.use_trt_policy} "
                    f"(vision_fail={model.trt_vision_fail_reason or 'none'} policy_fail={model.trt_policy_fail_reason or 'none'})")
 
@@ -636,35 +638,14 @@ def main(demo=False):
       # usbgpu_present() shells into tinygrad, so keep it off the per-frame path.
       republish_gpu_state(params, inference_active)
 
-    # Receive next main frame (FrameSync ensures matching frame_ids across cameras)
-    buf_main = vipc_client_main.recv()
-    meta_main = FrameMeta(vipc_client_main)
-    if buf_main is None:
-      cloudlog.debug("vipc_client_main no frame")
+    # Pair road/wide by frame id (bounded by exposure time); None = give up this
+    # round rather than mispair. Dropped buffers are released for the refcounted
+    # VisionIPC stream (on_drop), so advancement does not leak ref counts.
+    pair = receive_camera_pair(vipc_client_main, vipc_client_extra if use_extra_client else None, on_drop=_release_vipc)
+    if pair is None:
+      cloudlog.debug("no camera pair")
       continue
-
-    if use_extra_client:
-      # Receive extra frame — FrameSync guarantees same global_frame_id
-      buf_extra = vipc_client_extra.recv()
-      meta_extra = FrameMeta(vipc_client_extra)
-      if buf_extra is None:
-        cloudlog.debug("vipc_client_extra no frame")
-        if buf_main is not None:
-          _release_vipc(buf_main)  # 归还已 acquire 的 main buffer, 避免 ref_count 泄漏
-        continue
-
-      # Decoupled FrameSync: wide 稳定落后 main 1 帧是设计稳态 (claim/follow 交错, camerad.py),
-      # 差 1 只走 debug 进日志文件; 只有真实异常 (|差|>1, 含 wide 超前) 才 warning 刷屏。
-      if meta_main.frame_id != meta_extra.frame_id:
-        if abs(meta_main.frame_id - meta_extra.frame_id) > 1:
-          cloudlog.warning(f"frame_id mismatch (anomaly): main={meta_main.frame_id} extra={meta_extra.frame_id}")
-        else:
-          cloudlog.debug(f"frame_id skew 1 (steady state): main={meta_main.frame_id} extra={meta_extra.frame_id}")
-
-    else:
-      # Use single camera
-      buf_extra = buf_main
-      meta_extra = meta_main
+    buf_main, meta_main, buf_extra, meta_extra = pair
 
     sm.update(0)
     desire = DH.desire
