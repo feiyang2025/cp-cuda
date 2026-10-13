@@ -857,7 +857,7 @@ class VCruiseCarrot:
           elif self.d_rel < self.cruiseOnDist:
             self._cruise_control(1, 0, "Cruise on (fcw dist)")
           else:
-            self._add_log(f"leadCar d={self.d_rel:.1f},v={self.v_rel:.1f},{CS.vEgo:.1f}, {safe_dist:.1f}")
+            self._add_log(f"前车 d={self.d_rel:.1f},v={self.v_rel:.1f},{CS.vEgo:.1f}, {safe_dist:.1f}")
             #self.events.append(EventName.stopStop)
         if CS.leftBlinker or CS.rightBlinker:
           pass

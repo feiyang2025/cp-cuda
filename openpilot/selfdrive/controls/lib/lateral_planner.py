@@ -288,7 +288,7 @@ class LateralPlanner:
     self.x_sol = self.lat_mpc.x_sol
 
     debugText = (
-      f"{'lanemode' if self.lanelines_active else 'laneless'} | " +
+      f"{'车道模式' if self.lanelines_active else '无车道线'} | " +
       f"{self.LP.lane_width_left:.1f}m | " +
       f"{self.LP.lane_width:.1f}m | " +
       f"{self.LP.lane_width_right:.1f}m | " +

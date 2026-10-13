@@ -934,7 +934,7 @@ class HudRenderer(Widget):
 
     disp_speed = 0
     limit_color = COLORS.GREEN_210
-    label = "LIMIT"
+    label = tr("LIMIT")
 
     if x_spd_limit > 0 and x_sign_type != 22:
       disp_speed = int(x_spd_limit if ui_state.is_metric else (x_spd_limit * KM_TO_MILE + 0.5))
@@ -1022,7 +1022,7 @@ class HudRenderer(Widget):
     dx2 = dx + 150
     mem_fill = COLORS.RED_SOLID if (self._memory_usage > 85 and self._blink_timer <= 8) else ok_color
     self._draw_round_box(dx2 - 65, dy - 38, 130, 90, mem_fill, line_color=rl.WHITE, roundness=0.16, segments=8, line_thickness=2)
-    draw_text_ui_style("MEM", dx2, dy - 5, 25, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
+    draw_text_ui_style(tr("MEM"), dx2, dy - 5, 25, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
     draw_text_ui_style(self._memory_usage_text, dx2, dy + 40, 40, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
 
     # DISK / VOLT
@@ -1030,10 +1030,10 @@ class HudRenderer(Widget):
     self._draw_round_box(dx3 - 65, dy - 38, 130, 90, ok_color, line_color=rl.WHITE, roundness=0.16, segments=8, line_thickness=2)
 
     if self._disp_timer < 32:
-      draw_text_ui_style("DISK", dx3, dy - 5, 25, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
+      draw_text_ui_style(tr("DISK"), dx3, dy - 5, 25, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
       draw_text_ui_style(self._disk_usage_text, dx3, dy + 40, 40, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
     else:
-      draw_text_ui_style("VOLT", dx3, dy - 5, 25, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
+      draw_text_ui_style(tr("VOLT"), dx3, dy - 5, 25, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
       draw_text_ui_style(self._voltage_text, dx3, dy + 40, 40, rl.WHITE, font=self._font_display, border_width=1.0, shadow_offset=4.0, align="center_bottom")
 
   def _draw_date_time(self, rect: rl.Rectangle) -> None:

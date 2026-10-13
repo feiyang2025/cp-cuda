@@ -1519,6 +1519,19 @@ msgstr "下载中..."
 msgid "eGPU"
 msgstr "eGPU"
 
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "MEM"
+msgstr "内存"
+
+msgid "DISK"
+msgstr "存储"
+
+msgid "VOLT"
+msgstr "电压"
+
+msgid "LIMIT"
+msgstr "限速"
+
 #: openpilot/selfdrive/ui/layouts/settings/usbgpu.py
 msgid "eGPU Status"
 msgstr "eGPU 状态"

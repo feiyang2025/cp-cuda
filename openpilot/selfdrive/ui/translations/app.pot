@@ -1800,3 +1800,16 @@ msgstr ""
 msgid "Check tires, pressure, or alignment (Factor: {stiffness_factor:.1f})"
 msgstr ""
 
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "MEM"
+msgstr ""
+
+msgid "DISK"
+msgstr ""
+
+msgid "VOLT"
+msgstr ""
+
+msgid "LIMIT"
+msgstr ""
+

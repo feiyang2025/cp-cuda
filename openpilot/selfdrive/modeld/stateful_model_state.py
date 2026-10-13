@@ -53,11 +53,7 @@ class StatefulModelState:
     self.parser = Parser()
     self.prev_desire = np.zeros(ModelConstants.DESIRE_LEN, dtype=np.float32)
     self.desire_len = int(self.input_shapes["desire"][0])
-
-    # Recurrent state, rolled from next_state_* each frame (zero on cold start).
-    self.state_img = np.zeros(tuple(self.input_shapes["state_img_q"]), dtype=np.float16)
-    self.state_desire = np.zeros(tuple(self.input_shapes["state_desire_q"]), dtype=np.float32)
-    self.state_feat = np.zeros(tuple(self.input_shapes["state_feat_q"]), dtype=np.float32)
+    # The recurrent state is owned by the runner (device-resident); no host buffers here.
 
     # cuda_transform outputs (2,6,128,256) per camera; index 1 is the current frame.
     self._dev_out = {k: np.zeros((2, 6, MODEL_H, MODEL_W), dtype=np.uint8) for k in CAMERAS}
@@ -106,11 +102,7 @@ class StatefulModelState:
     self.prev_desire[:] = inputs["desire"]
 
     out = self.runner.run(new_img, desire.astype(np.float32),
-                          inputs["traffic_convention"].astype(np.float32), inputs["action_t"].astype(np.float32),
-                          self.state_img, self.state_desire, self.state_feat)
-    self.state_img = self.runner.state_img
-    self.state_desire = self.runner.state_desire
-    self.state_feat = self.runner.state_feat
+                          inputs["traffic_convention"].astype(np.float32), inputs["action_t"].astype(np.float32))
 
     if not np.isfinite(out).all():
       cloudlog.error("[Stateful] non-finite model output")
@@ -118,11 +110,10 @@ class StatefulModelState:
     return self.parser.parse_outputs({k: out[v][np.newaxis] for k, v in self.output_slices.items()})
 
   def warmup(self) -> None:
-    """Prime the engine and state before the first real frame."""
+    """Prime the engine (state starts zeroed inside the runner)."""
     z = np.zeros((2, 6, MODEL_H, MODEL_W), dtype=np.float16)
     self.runner.run(z, np.zeros(ModelConstants.DESIRE_LEN, dtype=np.float32),
-                    np.zeros((1, 2), dtype=np.float32), np.zeros((1, 2), dtype=np.float32),
-                    self.state_img, self.state_desire, self.state_feat)
+                    np.zeros((1, 2), dtype=np.float32), np.zeros((1, 2), dtype=np.float32))
 
   def __del__(self):
     runner = getattr(self, "runner", None)
