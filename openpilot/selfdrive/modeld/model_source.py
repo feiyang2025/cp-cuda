@@ -47,9 +47,67 @@ OPTIONAL_MODELS = (
   },
 )
 
+# Big driving models that the remote catalog (op.gitop.vip .../catalog.json) does
+# not list. Served from comma's HuggingFace model repo through the hf-mirror
+# mirror; the web model manager merges these into the picker, so a new model only
+# needs one entry here to become selectable and downloadable anywhere. sha256 is
+# the file's git-lfs oid, i.e. the digest the downloader verifies.
+#
+# Every export currently in comma's HuggingFace repo is a stateful ("generic")
+# model - inputs new_img/desire/action_t/traffic_convention + state_*, outputs
+# next_state_* - which this device's stateless modeld cannot run or compile, so
+# the entries carry "compilable": False to keep the compile button off them.
+HF_MIRROR = "https://hf-mirror.com/commaai/openpilot_driving_models/resolve/main"
+BUILTIN_MODELS = (
+  {
+    "label": "cinque-v3 (HF, 有状态)",
+    "model_id": "comma-pr38932-cinque-v3-hf",
+    "filename": "big_driving_supercombo.onnx",
+    "size": 766_354_845,
+    "sha256": "404a18cfd86d29637d20c697dfde245bb47c666ae016730ab674c65f4d1e1aa4",
+    "url": f"{HF_MIRROR}/f78ed37d-afad-4dbc-8050-40ea885eedde/12864/big_driving_supercombo.onnx",
+    "compilable": False,
+  },
+  {
+    "label": "HF 导出 1a421175 (有状态)",
+    "model_id": "comma-hf-1a421175",
+    "filename": "big_driving_supercombo.onnx",
+    "size": 766_320_181,
+    "sha256": "c7b300083b8dd6ce17545ef52edb6b577e3a805e6372f9f9343090604690242f",
+    "url": f"{HF_MIRROR}/1a421175-db71-4e3d-9d62-e2166421b02b/12864/big_driving_supercombo.onnx",
+    "compilable": False,
+  },
+  {
+    "label": "HF 导出 870a4823 (有状态)",
+    "model_id": "comma-hf-870a4823",
+    "filename": "big_driving_supercombo.onnx",
+    "size": 792_487_890,
+    "sha256": "c392ba1aa1b4b89e850366024fa6c1beac1f1fdc3a7182e3c3b0234c55e08eeb",
+    "url": f"{HF_MIRROR}/870a4823-d2ec-4b9a-8015-b947e9901fc7/12864/big_driving_supercombo.onnx",
+    "compilable": False,
+  },
+)
+
 # Schemes the model server may use. Upstream insists on https; this fork's mirror is
 # plain http on a LAN, and integrity comes from the mandatory sha256 checks instead.
 MODEL_SCHEMES = ("http", "https")
+
+
+def builtin_manifests() -> list:
+  """Validated dicts for BUILTIN_MODELS; a bad entry is skipped, not raised.
+
+  Plain dicts (not manifests) so the caller keeps the 'label' field; used by the
+  web model manager so these models are listed even when the remote catalog does
+  not know them.
+  """
+  out = []
+  for meta in BUILTIN_MODELS:
+    try:
+      manifest_from_dict(meta)  # validate
+    except Exception:
+      continue
+    out.append(dict(meta))
+  return out
 
 
 def manifest_from_dict(meta: dict):

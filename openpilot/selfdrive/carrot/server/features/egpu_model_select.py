@@ -30,7 +30,7 @@ from openpilot.selfdrive.modeld import chunked_model, model_bundle, model_catalo
 from openpilot.selfdrive.modeld.big_model import active_manifest, model_cache_dir
 
 from . import model_compile
-from openpilot.selfdrive.modeld.model_source import MODEL_BASE
+from openpilot.selfdrive.modeld.model_source import MODEL_BASE, builtin_manifests
 
 from ..services.params import HAS_PARAMS, Params
 
@@ -130,7 +130,7 @@ def _running_sha() -> str | None:
 
 
 def _entry(label: str | None, model_id: str | None, sha: str, size, url, *, downloaded: bool,
-           selected: bool, is_active: bool, precompiled_only: bool = False) -> dict[str, Any]:
+           selected: bool, is_active: bool, precompiled_only: bool = False, compilable: bool = True) -> dict[str, Any]:
   return {
     'label': label or model_id or sha[:12],
     'model_id': model_id,
@@ -143,6 +143,9 @@ def _entry(label: str | None, model_id: str | None, sha: str, size, url, *, down
     # A pkl delivery (chunked/precompiled) has no tinygrad source to rebuild from, so
     # the page labels it differently and never offers a local rebuild.
     'precompiled_only': bool(precompiled_only),
+    # compilable is False for a stateful export the local stateless runner cannot
+    # turn into a TensorRT engine (a .pkl, or an onnx flagged by its source entry).
+    'compilable': bool(compilable) and not precompiled_only,
   }
 
 
@@ -179,6 +182,19 @@ def build_models_payload() -> dict[str, Any]:
                          entry.get('url'), downloaded=bool(known.get('downloaded')),
                          selected=sha == selected, is_active=sha == active,
                          precompiled_only=_precompiled_only(known, entry)))
+
+  # Built-in models (HuggingFace mirror) the remote catalog may not know. Merged the
+  # same way, so a fresh device still sees them and can download them directly.
+  for entry in builtin_manifests():
+    sha = entry.get('sha256')
+    if not isinstance(sha, str) or len(sha) != 64:
+      continue
+    known = by_sha.pop(sha, {})
+    models.append(_entry(entry.get('label'), entry.get('model_id'), sha, entry.get('size'),
+                         entry.get('url'), downloaded=bool(known.get('downloaded')),
+                         selected=sha == selected, is_active=sha == active,
+                         precompiled_only=_precompiled_only(known, entry),
+                         compilable=bool(entry.get('compilable', True))))
 
   # Anything on disk that the server no longer lists still has to be switchable.
   for sha, known in by_sha.items():
@@ -234,9 +250,32 @@ async def api_select(request: web.Request) -> web.Response:
     if isinstance(entry, dict) and entry.get('sha256') == sha:
       model_catalog.register_remote(entry)
       break
+  else:
+    # Built-in models are not in the remote catalog; register them the same way.
+    for entry in builtin_manifests():
+      if entry.get('sha256') == sha:
+        model_catalog.register_remote(entry)
+        break
 
   if not model_catalog.select(sha):
     return web.json_response({'ok': False, 'error': 'unknown model'}, status=404)
+
+  # Align status.json with the new selection so the tools page reports the chosen
+  # model instead of sitting on "checking" (status.sha256 != the active manifest).
+  # Only when the artifact is already on disk; otherwise "checking"/"downloading"
+  # is the honest state and the downloader keeps updating it.
+  try:
+    artifact = model_catalog.artifact_path(sha)
+    if artifact is not None:
+      from openpilot.selfdrive.modeld.big_model import model_cache_dir
+      from openpilot.selfdrive.modeld.big_model_status import write_big_model_status
+      meta = next((m for m in model_catalog.list_models() if m.get('sha256') == sha), {})
+      size = artifact.stat().st_size
+      write_big_model_status(model_cache_dir(), 'ready', model_id=meta.get('model_id'),
+                             sha256=sha, downloaded_bytes=size, total_bytes=size,
+                             detail='selected')
+  except Exception:
+    pass
 
   reboot = bool(body.get('reboot'))
   if reboot and HAS_PARAMS and Params is not None:

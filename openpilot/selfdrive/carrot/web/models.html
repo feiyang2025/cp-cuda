@@ -247,7 +247,7 @@
       use.addEventListener("click", () => selectModel(model, use));
       actions.appendChild(use);
     }
-    if (model.downloaded && !model.precompiled_only && !model.compiled) {
+    if (model.downloaded && model.compilable && !model.compiled) {
       const cmp = document.createElement("button");
       cmp.textContent = "编译为 TRT";
       cmp.className = "mini";
@@ -277,6 +277,7 @@
     add(model.downloaded ? "已下载" : "未下载", model.downloaded ? "ok" : "miss");
     if (model.precompiled_only) add("AMD 专用 · 本机不可编译", "miss");
     else if (model.compiled) add("已编译 TensorRT", "ok");
+    else if (!model.compilable) add("有状态模型 · 本机不可编译", "miss");
     else if (model.downloaded) add("可编译为 TensorRT", "sel");
     add(model.sha256.slice(0, 12) + "…");
     el.appendChild(badges);
