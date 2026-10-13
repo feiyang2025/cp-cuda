@@ -131,6 +131,7 @@
   <div class="toolbar">
     <label for="sourceSelect">模型来源</label>
     <select id="sourceSelect" hidden></select>
+    <label for="showUnusable"><input type="checkbox" id="showUnusable"> 显示本机不可用模型</label>
     <button id="btnRefresh" class="mini">刷新</button>
   </div>
 </header>
@@ -181,6 +182,7 @@
   const $ = (id) => document.getElementById(id);
 
   const state = { models: [], selected: null, active: null, busy: false, remote: false, source: null, sources: [], delivery: null };
+  let showUnusable = false;  // reveal models this device can neither run nor compile
 
   function fmtBytes(v) {
     const n = Number(v) || 0;
@@ -492,15 +494,21 @@
     renderSource();
     updateDelivery();
 
+    // Hide models this device can neither run nor compile (stateful .onnx / .pkl)
+    // unless asked for; listing them only invites a download that cannot be used.
+    const shown = showUnusable ? state.models : state.models.filter((m) => m.compilable || m.compiled);
+    const hidden = state.models.length - shown.length;
     const list = $("list");
     list.innerHTML = "";
-    if (!state.models.length) {
+    if (!shown.length) {
       const empty = document.createElement("div");
       empty.className = "banner";
-      empty.textContent = "没有找到任何模型。请确认 eGPU 已连接，且服务器上存在 models/catalog.json。";
+      empty.textContent = state.models.length
+        ? `本机没有可用模型（已隐藏 ${hidden} 个不可用；勾选"显示本机不可用模型"查看）。`
+        : "没有找到任何模型。请确认 eGPU 已连接，且服务器上存在 models/catalog.json。";
       list.appendChild(empty);
     } else {
-      for (const m of state.models) list.appendChild(card(m));
+      for (const m of shown) list.appendChild(card(m));
     }
 
     const activeLabel = (state.models.find((m) => m.active) || {}).label;
@@ -509,7 +517,7 @@
     // what made a freshly downloaded model look like it was already in use.
     const nextLabel = (state.models.find((m) => m.sha256 === state.active && !m.active) || {}).label;
     $("summary").textContent = state.models.length
-      ? `${state.models.length} 个模型${activeLabel ? " · 当前：" + activeLabel : ""}${nextLabel ? " · 重启后：" + nextLabel : ""}`
+      ? `${shown.length} 个模型${hidden ? `（另隐藏 ${hidden} 个不可用）` : ""}${activeLabel ? " · 当前：" + activeLabel : ""}${nextLabel ? " · 重启后：" + nextLabel : ""}`
       : "";
     if (!state.remote && state.models.length) {
       banner("服务器未提供 models/catalog.json，仅显示本机已下载的模型。", "warn");
@@ -719,6 +727,7 @@
   $("btnSmallRefresh").addEventListener("click", loadSmall);
 
   $("btnRefresh").addEventListener("click", load);
+  $("showUnusable").addEventListener("change", () => { showUnusable = $("showUnusable").checked; load(); });
   load();
   setInterval(() => { load(); }, 20000);
   setInterval(refreshDownloadProgress, 2000);
