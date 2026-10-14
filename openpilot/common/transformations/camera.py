@@ -150,11 +150,11 @@ DEVICE_CAMERAS.update({(d, c[0]): c[1] for d, c in prods})
 
 
 # ---- AGX Orin + Sensing/twgmsl IMX390 GMSL dual camera (PC webcamerad path) ----
-#   与 sp-cuda 一致 (同一套硬件/接线):
-#     /dev/video0 = "twgmsl 9-0028" = 120° 广角  → 暴露为 road (fcam)，厂商标定 pinhole fl≈961.76 @1920x1080
-#     /dev/video1 = "twgmsl 9-002a" = 60° 窄角   → 暴露为 wide (ecam)，厂商标定 fl≈1740.0 @1920x1080
+#   角色按"镜头 FOV"分配, 与 v4l2 节点号无关 (节点号由 scripts/resolve_cams.sh 动态解析):
+#     road (fcam) = 120° 广角  → 厂商标定 pinhole fl≈961.76 @1920x1080 (本机 = /dev/video1, twgmsl 9-002a)
+#     wide (ecam) =  60° 窄角  → 厂商标定 fl≈1740.0 @1920x1080 (本机 = /dev/video2, twgmsl 10-0028)
 #   2026-10-14: 本树此前把这两个焦距按流套反了 (road 用 60° 的 1740, wide 用 120° 的 961.76),
-#   两路内参都偏 ~1.8 倍, 现按 sp-cuda 的厂商标定纠正。
+#   两路内参都偏 ~1.8 倍, 现按 sp-cuda 的厂商标定纠正。数值按角色给, 与解析到的节点无关。
 # Live values are stored in the FcamIntrinsics / EcamIntrinsics Params
 # (resolution-keyed JSON written by tools/calib/*); the numbers below are the
 # fallback used the first time those Params are created.

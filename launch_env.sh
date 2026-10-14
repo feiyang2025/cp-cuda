@@ -72,7 +72,7 @@ if [ "$(uname -m)" = "aarch64" ] && [ ! -e /TICI ]; then
   export CAM_BRIGHTNESS="1.0"
 fi
 
-# v4l2 节点号会随枚举顺序漂移,启动时按设备名动态解析(ROAD=60°窄角主路/WIDE=120°广角/DRIVER=USB)
+# v4l2 节点号会随枚举顺序漂移,启动时按设备名动态解析(ROAD=120°广角主路/WIDE=60°窄角/DRIVER=USB)
 if [ -f "$(dirname "${BASH_SOURCE[0]}")/scripts/resolve_cams.sh" ]; then
   eval "$(bash "$(dirname "${BASH_SOURCE[0]}")/scripts/resolve_cams.sh" 2>/dev/null)"
 fi

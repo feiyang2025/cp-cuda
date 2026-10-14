@@ -1,18 +1,22 @@
 #!/bin/bash
 # resolve_cams.sh — 按 v4l2 设备名解析摄像头节点号并输出 export 语句。
 # v4l2 节点号(/dev/videoN)会随 USB 枚举/GMSL 驱动加载顺序漂移,不能硬编码。
-# 设备名(来自 /sys/class/video4linux/videoN/name):
-#   twgmsl 9-0028 -> GMSL 120° 广角(主路 road, video0)
-#   twgmsl 9-002a -> GMSL 60° 窄角(wide, video1)
-#   USB Camera    -> USB IMX678 90°(稳定中距离/后备)
-# 视场标签来源: sp-cuda 厂商标定 (120° 那只 pinhole fl≈961.76, 60° 那只 fl=1740)
-#   2026-10-14 与 sp-cuda 对齐: 9-0028 = 120°(road), 9-002a = 60°(wide)。
+# 设备名(来自 /sys/class/video4linux/videoN/name),本机 T906G 实测:
+#   twgmsl 9-002a  -> GMSL 120° 广角(主路 road, 实测 /dev/video1)
+#   twgmsl 10-0028 -> GMSL  60° 窄角(wide,      实测 /dev/video2)
+#   其余 twgmsl 口(9-0028/10-002a/11-*/12-*) 本机未接相机 -> 不选
+#   USB Camera     -> USB IMX678 90°(后备)
+# 关键: FOV 由插在哪个 GMSL 口上的镜头决定, 与传感器 i2c 地址(0028/002a)无关。
+#   2026-10-14 目视预览确认: /dev/video1(9-002a)=120° 更广, /dev/video2(10-0028)=60° 更窄;
+#   而 /dev/video0(9-0028) 驱动报 disconnected(该口没接相机), 不能再当 road。
+#   换口/换接线后必须同步改这里的设备名。
+# 内参: 角色 road=120°(fl≈961.76) / wide=60°(fl=1740) 不变(camera.py 按角色给 fl)。
 # 输出: export ROAD_CAM='N' 等(与 launch_env.sh 的用法一致)
 #
 # 容错优先级:
 #   ROAD   = 120°(若死则用 USB)
-#   WIDE   = 60°(若死则用 120°;再不行用 USB)
-#   DRIVER = USB(仅当 ROAD 已由 60° 承担时;ROAD 用了 USB 则 DRIVER 留空)
+#   WIDE   = 60°(若死则用 USB)
+#   DRIVER = USB(仅当 ROAD/WIDE 未占用 USB 时)
 
 find_by_name() {
   local pat="$1"
@@ -26,25 +30,23 @@ find_by_name() {
   return 1
 }
 
-CAM30=$(find_by_name "twgmsl 9-0028")
-CAM196=$(find_by_name "twgmsl 9-002a")
+CAM120=$(find_by_name "twgmsl 9-002a")
+CAM60=$(find_by_name "twgmsl 10-0028")
 CAMUSB=$(find_by_name "USB Camera")
 
 ROAD=""
 WIDE=""
 DRIVER=""
 
-# 120° 广角做主路(与 sp-cuda 一致)
-if [ -n "$CAM30" ]; then
-  ROAD="$CAM30"
+# 120° 广角做主路
+if [ -n "$CAM120" ]; then
+  ROAD="$CAM120"
 else
   ROAD="$CAMUSB"
 fi
 # 60° 窄角做 wide
-if [ -n "$CAM196" ]; then
-  WIDE="$CAM196"
-elif [ -n "$CAM30" ] && [ "$CAM30" != "$ROAD" ]; then
-  WIDE="$CAM30"
+if [ -n "$CAM60" ]; then
+  WIDE="$CAM60"
 elif [ -n "$CAMUSB" ] && [ "$CAMUSB" != "$ROAD" ]; then
   WIDE="$CAMUSB"
 fi
