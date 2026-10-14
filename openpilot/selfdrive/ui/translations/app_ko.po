@@ -1796,3 +1796,19 @@ msgstr "신호가바뀌었어요."
 msgid "🔥 Firehose Mode 🔥"
 msgstr "🔥 파이어호스 모드 🔥"
 
+
+#: openpilot/selfdrive/ui/onroad/model_renderer.py
+msgid "E2E주행중"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "도착: {minutes}분({clock})"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "목적지"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "감속"
+msgstr ""

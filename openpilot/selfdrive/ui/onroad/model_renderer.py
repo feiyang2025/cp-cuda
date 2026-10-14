@@ -14,6 +14,7 @@ from openpilot.selfdrive.ui.road_markings import (
   lane_dash_segments, project_blindspot_barrier, blindspot_barrier_quads,
 )
 from openpilot.system.ui.lib.application import gui_app, FontWeight
+from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_draw import draw_text_ui_style
 from openpilot.system.ui.lib.shader_polygon import draw_polygon, draw_polygon_solid, Gradient
 from openpilot.system.ui.widgets import Widget
@@ -867,7 +868,7 @@ class ModelRenderer(Widget):
           else:
             draw_text_ui_style("Signal slowing", x, disp_y, 50, rl.Color(255, 255, 255, 255), align="center", y_offset=0.0)
         elif self._carrot_x_state == 4:
-          draw_text_ui_style("E2E주행중", x, disp_y, 50, rl.Color(255, 255, 255, 255), align="center", y_offset=0.0)
+          draw_text_ui_style(tr("E2E주행중"), x, disp_y, 50, rl.Color(255, 255, 255, 255), align="center", y_offset=0.0)
         elif self._carrot_x_state in (0, 1, 2):
           draw_dist = True
       else:

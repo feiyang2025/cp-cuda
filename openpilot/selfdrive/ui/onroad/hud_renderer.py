@@ -1221,7 +1221,8 @@ class HudRenderer(Widget):
     # Arrival time is wall-clock based; monotonic time cannot be converted to local time.
     eta_tm = time.localtime(time.time() + remain_sec)  # noqa: TID251
     remain_min = remain_sec / 60.0
-    return f"도착: {remain_min:.1f}분({eta_tm.tm_hour:02d}:{eta_tm.tm_min:02d})"
+    clock = f"{eta_tm.tm_hour:02d}:{eta_tm.tm_min:02d}"
+    return tr("도착: {minutes}분({clock})").format(minutes=f"{remain_min:.1f}", clock=clock)
 
   def _format_go_pos_distance_text(self, dist_m: int) -> str:
     if dist_m <= 0:
@@ -1265,7 +1266,7 @@ class HudRenderer(Widget):
       )
     elif turn_info == 8:
       draw_text_ui_style(
-        "목적지", bx, by + 20, 35, rl.WHITE,
+        tr("목적지"), bx, by + 20, 35, rl.WHITE,
         font=self._font_display,
         border_width=2.0,
         shadow_offset=4.0,
@@ -1273,7 +1274,7 @@ class HudRenderer(Widget):
       )
     else:
       draw_text_ui_style(
-        f"감속:{turn_info}", bx, by + 20, 35, rl.WHITE,
+        f"{tr('감속')}:{turn_info}", bx, by + 20, 35, rl.WHITE,
         font=self._font_display,
         border_width=2.0,
         shadow_offset=4.0,

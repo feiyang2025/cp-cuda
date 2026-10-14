@@ -20,6 +20,7 @@ import { createContinuousAnchorStore } from "./anchor_store.js";
 import { composeFrame } from "./compose.js";
 import { createMarkerIdentityTracker } from "./marker_identity.js";
 import { createRouteMatcher } from "./route_matcher.js";
+import { setSignboardLanguage } from "./signboard.js";
 import { createRenderPerformancePolicy } from "./performance_policy.js";
 import { createDeviceWorldPose } from "./world_pose.js";
 
@@ -72,6 +73,7 @@ function drawFrame(payload = {}) {
     return;
   }
   const workStartedAt = workerNowMs();
+  if (payload.language) setSignboardLanguage(payload.language);
   if (payload.timelineDiscontinuity === true) {
     anchorStore.reset();
     identityTracker.reset();

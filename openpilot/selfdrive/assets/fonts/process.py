@@ -32,9 +32,13 @@ def _char_sets():
   # in the date line (日一二三四五六) are built in code, not translated.
   unifont.update("日一二三四五六")
   # The Chinese fallback font is CJK-only (no Hangul): every .po file plus the
-  # built-in weekday letters, so it is a superset of what any translated string
-  # can need.
+  # built-in weekday letters. On top of that the navigator draws dynamic road
+  # names that never appear in a .po file, so also bake the common Hanzi block
+  # (U+4E00–U+9FFF); without it names like 广阳道/东安路 render as "?".
   cjk = set(base) | set("日一二三四五六")
+  cjk.update(chr(cp) for cp in range(0x4E00, 0xA000))
+  # Punctuation the startup recovery screen uses in its Chinese lines.
+  cjk.update("·…")
   for po_cjk in TRANSLATIONS_DIR.glob("app_*.po"):
     cjk.update(po_cjk.read_text(encoding="utf-8"))
   for language, code in _languages().items():

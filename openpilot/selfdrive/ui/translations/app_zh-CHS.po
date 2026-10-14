@@ -1840,3 +1840,19 @@ msgstr "信号灯已变化"
 msgid "🔥 Firehose Mode 🔥"
 msgstr "🔥数据上传模式 🔥"
 
+
+#: openpilot/selfdrive/ui/onroad/model_renderer.py
+msgid "E2E주행중"
+msgstr "E2E行驶中"
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "도착: {minutes}분({clock})"
+msgstr "到达: {minutes}分({clock})"
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "목적지"
+msgstr "目的地"
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "감속"
+msgstr "减速"

@@ -190,6 +190,17 @@ function createWorkerPipe({ host, documentRoot, target, options, onBroken, onDra
     return true;
   }
 
+  /** 워커엔 <html lang> 이 없으므로 표지 문구 언어를 프레임에 실어 보낸다. */
+  function currentWebLanguage() {
+    try {
+      const raw = String(documentRoot?.documentElement?.lang || target.document?.documentElement?.lang || "").toLowerCase();
+      if (raw.startsWith("zh")) return "zh";
+      if (raw.startsWith("en")) return "en";
+      if (raw.startsWith("ko")) return "ko";
+    } catch (_) { /* ignore */ }
+    return "";
+  }
+
   function compactPayload(payload = {}) {
     const rawComposeInput = payload.composeInput || {};
     const revisions = payload.sourceRevisions || {};
@@ -214,6 +225,7 @@ function createWorkerPipe({ host, documentRoot, target, options, onBroken, onDra
     const { sourceRevisions: _sourceRevisions, ...rest } = payload;
     return {
       ...rest,
+      language: currentWebLanguage(),
       composeInput,
       ...(Object.keys(sourceUpdate).length ? { sourceUpdate } : {}),
     };

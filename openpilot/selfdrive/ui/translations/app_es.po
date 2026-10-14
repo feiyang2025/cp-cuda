@@ -1802,3 +1802,19 @@ msgstr ""
 msgid "🔥 Firehose Mode 🔥"
 msgstr "🔥 Modo Firehose 🔥"
 
+
+#: openpilot/selfdrive/ui/onroad/model_renderer.py
+msgid "E2E주행중"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "도착: {minutes}분({clock})"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "목적지"
+msgstr ""
+
+#: openpilot/selfdrive/ui/onroad/hud_renderer.py
+msgid "감속"
+msgstr ""

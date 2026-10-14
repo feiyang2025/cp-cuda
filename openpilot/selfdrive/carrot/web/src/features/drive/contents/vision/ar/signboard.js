@@ -341,11 +341,81 @@ export function formatDistance(meters) {
   return `${(m / 1000).toFixed(m >= 10000 ? 0 : 1)}km`;
 }
 
-const TURN_LABEL = Object.freeze({
-  left: "좌회전", right: "우회전",
-  slight_left: "좌측", slight_right: "우측",
-  sharp_left: "급좌회전", sharp_right: "급우회전",
-  uturn: "유턴", straight: "직진",
+/* ── UI 언어 ─────────────────────────────────────────────
+ * 표지 문구는 워커(OffscreenCanvas)에서 그려진다. 워커에는 DOM 이 없어
+ * <html lang> 을 못 읽으므로, 메인 스레드가 프레임 payload 로 언어를 넘겨
+ * setSignboardLanguage() 로 맞춘다. 언어를 못 받으면 기존처럼 한국어를 쓴다.
+ */
+const SIGNBOARD_STRINGS = Object.freeze({
+  ko: Object.freeze({
+    left: "좌회전", right: "우회전",
+    slight_left: "좌측", slight_right: "우측",
+    sharp_left: "급좌회전", sharp_right: "급우회전",
+    uturn: "유턴", straight: "직진",
+    recommended_lane: "권장 차선", destination: "도착",
+    speed_bump: "과속방지턱", police: "경찰",
+    speed_camera: "단속카메라", road_caution: "도로 주의",
+    section_paused: "구간단속 일시중지", section_avg: "구간 평균",
+    signal: "신호", stop: "정지", crossroad: "교차로", seconds: "초",
+  }),
+  en: Object.freeze({
+    left: "Turn left", right: "Turn right",
+    slight_left: "Keep left", slight_right: "Keep right",
+    sharp_left: "Sharp left", sharp_right: "Sharp right",
+    uturn: "U-turn", straight: "Straight",
+    recommended_lane: "Recommended lane", destination: "Arrival",
+    speed_bump: "Speed bump", police: "Police",
+    speed_camera: "Speed camera", road_caution: "Road caution",
+    section_paused: "Section control paused", section_avg: "Section avg",
+    signal: "Signal", stop: "Stop", crossroad: "Intersection", seconds: "s",
+  }),
+  zh: Object.freeze({
+    left: "左转", right: "右转",
+    slight_left: "靠左", slight_right: "靠右",
+    sharp_left: "急左转", sharp_right: "急右转",
+    uturn: "掉头", straight: "直行",
+    recommended_lane: "推荐车道", destination: "到达",
+    speed_bump: "减速带", police: "警察",
+    speed_camera: "测速摄像头", road_caution: "道路注意",
+    section_paused: "区间测速暂停", section_avg: "区间平均",
+    signal: "信号", stop: "停车", crossroad: "路口", seconds: "秒",
+  }),
+});
+
+function normalizeSignboardLanguage(raw) {
+  const code = String(raw || "").toLowerCase();
+  if (code.startsWith("zh")) return "zh";
+  if (code.startsWith("en")) return "en";
+  if (code.startsWith("ko")) return "ko";
+  return "";
+}
+
+function initialSignboardLanguage() {
+  try {
+    const code = normalizeSignboardLanguage(globalThis.document?.documentElement?.lang);
+    if (code) return code;
+  } catch (_) { /* 워커 등 DOM 없는 환경 */ }
+  return "ko";
+}
+
+let signboardLanguage = initialSignboardLanguage();
+
+/** 메인 스레드는 <html lang>, 워커는 프레임 payload 로 이 값을 맞춘다. */
+export function setSignboardLanguage(raw) {
+  const code = normalizeSignboardLanguage(raw);
+  if (code) signboardLanguage = code;
+}
+
+function signboardText(key) {
+  const table = SIGNBOARD_STRINGS[signboardLanguage] || SIGNBOARD_STRINGS.ko;
+  return table[key] ?? SIGNBOARD_STRINGS.ko[key] ?? "";
+}
+
+const TURN_KEY = Object.freeze({
+  left: "left", right: "right",
+  slight_left: "slight_left", slight_right: "slight_right",
+  sharp_left: "sharp_left", sharp_right: "sharp_right",
+  uturn: "uturn", straight: "straight",
 });
 
 /**
@@ -355,7 +425,7 @@ const TURN_LABEL = Object.freeze({
 export function signboardFromMarker(marker = {}) {
   const dist = formatDistance(marker.distanceM);
   const turn = marker.turn || {};
-  const label = TURN_LABEL[turn.direction] || "";
+  const label = TURN_KEY[turn.direction] ? signboardText(TURN_KEY[turn.direction]) : "";
   const common = { distanceM: marker.distanceM, phase: marker.phase };
 
   /* 승인 preview에서 LANE/BAND도 다른 종류와 같은 descriptor→painter→Three
@@ -365,7 +435,7 @@ export function signboardFromMarker(marker = {}) {
       ...common,
       tone: AR_TONE.LANE,
       primary: dist,
-      secondary: "권장 차선",
+      secondary: signboardText("recommended_lane"),
       laneWidthM: Number(marker.laneWidthM) || 3.5,
     });
     return Object.freeze({
@@ -391,26 +461,26 @@ export function signboardFromMarker(marker = {}) {
     case "commit_arrow":
       // 진입 직전의 방향 지시. 거리 텍스트 없이 방향만 크게.
       return withKind(describeSignboard({
-        ...common, tone: AR_TONE.GUIDE, primary: label || "직진",
+        ...common, tone: AR_TONE.GUIDE, primary: label || signboardText("straight"),
         secondary: "", turnSign: turn.sign,
       }));
     case "destination_pin":
       return withKind(describeSignboard({
-        ...common, tone: AR_TONE.DESTINATION, primary: "도착", secondary: dist,
+        ...common, tone: AR_TONE.DESTINATION, primary: signboardText("destination"), secondary: dist,
       }));
     case "caution_sign":
       return withKind(describeSignboard({
         ...common, tone: AR_TONE.CAUTION, primary: dist,
-        secondary: marker.sdiFamily === "bump" ? "과속방지턱"
-          : marker.sdiFamily === "police" ? "경찰"
-            : marker.sdiFamily === "camera" ? "단속카메라" : "도로 주의",
+        secondary: marker.sdiFamily === "bump" ? signboardText("speed_bump")
+          : marker.sdiFamily === "police" ? signboardText("police")
+            : marker.sdiFamily === "camera" ? signboardText("speed_camera") : signboardText("road_caution"),
       }));
     case "section_gate":
       return withKind(describeSignboard({
         ...common, tone: AR_TONE.RESTRICT, primary: String(marker.limitKph || ""),
         secondary: marker.suspended
-          ? "구간단속 일시중지"
-          : `구간 평균 ${Math.round(marker.averageKph || marker.overallAverageKph || 0)}`,
+          ? signboardText("section_paused")
+          : `${signboardText("section_avg")} ${Math.round(marker.averageKph || marker.overallAverageKph || 0)}`,
       }));
     case "speed_sign":
       return withKind(describeSignboard({
@@ -422,17 +492,20 @@ export function signboardFromMarker(marker = {}) {
       const lamps = Array.isArray(marker.lamps) ? marker.lamps : [];
       const on = lamps.find((l) => l.on);
       if (!on) return null;
-      const NAME = { red: "정지", green: "직진", left: "좌회전", right: "우회전", uturn: "유턴" };
+      const NAME = {
+        red: signboardText("stop"), green: signboardText("straight"),
+        left: signboardText("left"), right: signboardText("right"), uturn: signboardText("uturn"),
+      };
       return withKind(describeSignboard({
-        ...common, tone: AR_TONE.CAUTION, primary: NAME[on.id] || "신호",
+        ...common, tone: AR_TONE.CAUTION, primary: NAME[on.id] || signboardText("signal"),
         secondary: (on.remainSec > 0 || marker.counterRemainSec > 0)
-          ? `${Math.round(on.remainSec || marker.counterRemainSec)}초`
+          ? `${Math.round(on.remainSec || marker.counterRemainSec)}${signboardText("seconds")}`
           : dist,
       }));
     }
     case "crossroad_card":
       return withKind(describeSignboard({
-        ...common, tone: AR_TONE.GUIDE, primary: dist, secondary: "교차로",
+        ...common, tone: AR_TONE.GUIDE, primary: dist, secondary: signboardText("crossroad"),
       }));
     default:
       return null;

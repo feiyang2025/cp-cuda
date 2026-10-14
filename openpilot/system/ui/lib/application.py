@@ -124,7 +124,8 @@ class FontWeight(StrEnum):
   DISPLAY = "KaiGenGothicKR-Bold.fnt"
 
   # 中文回退字体: 用本目录的烘焙器 assets/fonts/process.py + 系统里的文泉驿正黑(wqy-zenhei)
-  # 现场烘的图集, 覆盖两个中文 .po 用到的全部汉字(只差 ‑ ✓ 🔥 三个符号, 那几个在纯拉丁串里画)。
+  # 现场烘的图集, 覆盖两个中文 .po 用到的全部汉字, 外加常用汉字基本区(U+4E00–U+9FFF),
+  # 以容纳导航动态路名(如 广阳道/东安路, 这些字不在 .po 里)。
   # 背景: 本树原来中文回退到 DISPLAY(KaiGenGothicKR-Bold.fnt, 韩文字体), 它图集里汉字不全 →
   # 界面上 "态/电/通/轻/柔" 被画成 "?"; 改成回退 unifont 又不缺字, 但 unifont 是点阵字体,
   # 中文看起来像"数码管"。
