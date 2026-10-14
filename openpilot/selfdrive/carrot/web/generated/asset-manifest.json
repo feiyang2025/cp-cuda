@@ -13,7 +13,7 @@
       "kind": "bundle",
       "source": "src/entries/drive.js",
       "path": "js/generated/drive.js",
-      "hash": "a73cfef5091760d4f644da22468a62d906a6696a9e8ff5b68b704e35827d84bd"
+      "hash": "7a186c87d3a8b15c078f0e2d57f3d0af279d9fce319a56375c987b3f118f83a9"
     },
     {
       "id": "replay.runtime",
@@ -69,7 +69,7 @@
       "kind": "bundle",
       "source": "src/entries/terminal_guest.js",
       "path": "js/generated/terminal-guest.js",
-      "hash": "d2601c53cb5fb40122cd1e794ab8aadb9c45579e6b19404dffe6b443e64a2bfb"
+      "hash": "e87f6314ce947c4bdfc8993b53b25f22a4d353bac0280490dcec84780155894b"
     },
     {
       "id": "intro.runtime",

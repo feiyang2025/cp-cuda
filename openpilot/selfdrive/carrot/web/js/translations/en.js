@@ -577,6 +577,30 @@ window.CarrotTranslations.register("en", {
     carrot_navi_waiting_title: "Waiting for map video",
     carrot_navi_waiting_detail: "Waiting for the first frame",
     carrot_navi_map_recovering: "Map decoder recovering",
+    hud_accel: "Acceleration",
+
+    hud_steer: "Steering output",
+
+    hud_speed: "Speed",
+
+    hud_turn_signal: "Turn signal",
+
+    hud_network: "Network",
+
+    hud_cpu_temp: "CPU temperature",
+
+    hud_clock: "Clock",
+
+    hud_speed_limit: "Speed limit",
+    playback_failed: "Playback failed",
+
+    replay_playback_controls: "Playback controls",
+
+    map_zoom_default: "Default",
+
+    map_zoom_in: "In {n}",
+
+    map_zoom_out: "Out {n}",
     drive_stream_busy: "Active on another device",
     drive_stream_use_here: "Use here",
     web_kmap_enabled: "Carrot map",

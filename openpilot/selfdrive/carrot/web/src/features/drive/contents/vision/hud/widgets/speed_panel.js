@@ -2,7 +2,7 @@
 
 import { SPEED_BG_URI, TRAFFIC_GREEN_URI, TRAFFIC_RED_URI } from "../assets.js";
 import { COLORS } from "../tokens.js";
-import { svg, setText } from "../dom.js";
+import { svg, setText, ariaText } from "../dom.js";
 
 // 숫자 정중앙 보정: baseline = 설계 중심 + cap-height 절반(0.35em). 폰트별 미세조정.
 const CAP = 0.35;
@@ -56,7 +56,7 @@ export function createSpeedPanel(doc) {
     class: "chud-speed",
     viewBox: VIEWBOX,
     role: "img",
-    "aria-label": "속도",
+    "aria-label": ariaText("hud_speed", "속도"),
   });
   const background = svg(doc, "image", {
     class: "chud-speed-bg-image",

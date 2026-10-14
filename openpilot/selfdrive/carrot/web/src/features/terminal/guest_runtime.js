@@ -58,9 +58,11 @@
     },
   };
 
-  // The remote support guest page is only ever used by the (Korean) admin, so
-  // force Korean here. The multi-locale strings map is kept intact for reuse.
-  const language = "ko";
+  // 원격 지원 페이지이므로 웹 UI 언어를 그대로 따른다(없으면 영어).
+  // 이전에는 한국어로 고정했으나, zh 사용자는 한국어를 볼 수 없도록 한다.
+  const language = ["ko", "zh"].includes(typeof LANG !== "undefined" ? LANG : "")
+    ? LANG
+    : "en";
   const t = (key, vars = null) => {
     let value = strings[language][key] || strings.en[key] || key;
     if (vars) Object.entries(vars).forEach(([name, replacement]) => { value = value.replaceAll(`{${name}}`, String(replacement)); });

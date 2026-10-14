@@ -1,6 +1,6 @@
 "use strict";
 
-import { svg } from "../dom.js";
+import { svg, ariaText } from "../dom.js";
 
 function arrow(doc, side) {
   const left = side === "left";
@@ -20,7 +20,7 @@ function arrow(doc, side) {
 
 export function createTurnSignal(doc) {
   const root = svg(doc, "svg", {
-    class: "chud-turn", viewBox: "0 0 280 80", role: "img", "aria-label": "방향지시등",
+    class: "chud-turn", viewBox: "0 0 280 80", role: "img", "aria-label": ariaText("hud_turn_signal", "방향지시등"),
   });
   const left = arrow(doc, "left");
   const right = arrow(doc, "right");

@@ -625,7 +625,15 @@
       if (!this.zoomLevelEl) return;
       const b = this.zoomBias;
       // negative bias = zoomed in (closer); positive = zoomed out (farther)
-      this.zoomLevelEl.textContent = b === 0 ? "기본" : (b < 0 ? `확대 ${-b}` : `축소 ${b}`);
+      // 이 칸은 좁아서 번호만 붙인 짧은 약어를 쓴다(기본/IN N/OUT N).
+      const t = (key, fallback, vars = null) => (
+        typeof getUIText === "function" ? getUIText(key, fallback, vars) : fallback
+      );
+      this.zoomLevelEl.textContent = b === 0
+        ? t("map_zoom_default", "기본")
+        : (b < 0
+          ? t("map_zoom_in", "확대 {n}", { n: -b })
+          : t("map_zoom_out", "축소 {n}", { n: b }));
     }
 
     sendZoomBias() {

@@ -577,6 +577,30 @@ window.CarrotTranslations.register("ko", {
     carrot_navi_waiting_title: "지도 영상 대기 중",
     carrot_navi_waiting_detail: "첫 화면을 기다리는 중",
     carrot_navi_map_recovering: "지도 디코더 복구 중",
+    hud_accel: "가속도",
+
+    hud_steer: "조향출력",
+
+    hud_speed: "속도",
+
+    hud_turn_signal: "방향지시등",
+
+    hud_network: "네트워크",
+
+    hud_cpu_temp: "CPU 온도",
+
+    hud_clock: "시계",
+
+    hud_speed_limit: "제한속도",
+    playback_failed: "재생 실패",
+
+    replay_playback_controls: "재생 컨트롤",
+
+    map_zoom_default: "기본",
+
+    map_zoom_in: "확대 {n}",
+
+    map_zoom_out: "축소 {n}",
     drive_stream_busy: "다른 기기에서 사용 중",
     drive_stream_use_here: "여기서 사용",
     web_kmap_enabled: "당근맵",

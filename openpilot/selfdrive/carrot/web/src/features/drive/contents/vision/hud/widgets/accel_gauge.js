@@ -2,12 +2,13 @@
 
 import { createBipolarGauge } from "./bipolar_gauge.js";
 import { COLORS } from "../tokens.js";
+import { ariaText } from "../dom.js";
 
 /* accel 게이지: 종가속(m/s²). 클러스터 MAX_ACCEL_MPS2와 동일. */
 const MAX_ACCEL = 5;
 
 export function createAccelGauge(doc) {
-  const gauge = createBipolarGauge(doc, { label: "accel", ariaLabel: "가속도" });
+  const gauge = createBipolarGauge(doc, { label: "accel", ariaLabel: ariaText("hud_accel", "가속도") });
 
   function update(data = {}) {
     const accel = data.accel;

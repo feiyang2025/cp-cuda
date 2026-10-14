@@ -53,11 +53,38 @@ const WORDS = {
     cancelCruise: "Cancel cruise", cancelLong: "Cancel long (cruise and lateral off)",
     buttonHelp: "Cruise +/− request engagement through existing checks when cruise is off. Native long-button actions are separate choices: for example, a short remote press can run Cruise + long once, with no additional hold delay. LFA and gap actions follow existing settings.",
   },
+  zh: {
+    title: "蓝牙遥控", close: "关闭", scan: "搜索设备 (30秒)", on: "开启蓝牙", off: "关闭蓝牙",
+    help: "请在车辆静止且解除巡航的状态下设置。开启映射后会占用该设备原本的触摸·键盘·音量输入。变道仍遵循原有的车速·盲区·转向条件。可配对手机，但不提供通话·音频·网络功能。",
+    empty: "请将设备置于配对模式后搜索。若它仍连接在原来的手机上，请先断开。",
+    pair: "配对", connect: "连接", disconnect: "断开连接", forget: "取消注册", paired: "已配对", connected: "已连接",
+    profile: "输入类型", generic: "通用键盘 / HID", enabled: "启用 Carrot 映射 (占用原始 HID 输入)",
+    save: "保存映射", saved: "已保存", test: "学习 / 测试按键 (120秒)", stop: "结束测试", waiting: "准备测试中…",
+    testing: "测试中：不会发送车辆指令。按下并松开按键即可在下方显示。新按键会自动加入列表。",
+    idle: "等待输入", blocked: "需要车辆静止、解除巡航且输入服务正常才能设置。",
+    grabbed: "HID 输入独占中", inactive: "等待输入独占 (确认连接与映射状态)", learnHelp: "请先保存输入类型与映射再开始测试。通用 HID 需在测试中逐个按下并松开按键来学习。修改功能后需重新保存才会生效。Yiser-J6 是否支持长按取决于遥控器上报的实际输入。",
+    none: "无", accelCruise: "巡航 +", decelCruise: "巡航 −",
+    laneLeft: "左变道", laneRight: "右变道", paddleDecel: "拨片减速", gapAdjustCruise: "巡航间距",
+    up: "上", down: "下", left: "左", right: "右", center: "中", "1": "1", "2": "2",
+    cancel: "取消", confirm: "确认", pin: "PIN / 通行码", prompt: "配对确认", display: "请输入对方设备上显示的号码，或对照下方号码确认。",
+    scanning: "搜索中", ready: "就绪", unavailable: "无法使用蓝牙适配器", noService: "输入服务未运行",
+    unsaved: "请先保存改动内容", sent: "已下发车辆指令", testEvent: "测试输入", ignored: "指令未下发", battery: "电量",
+    single: "单击", double: "双击", long: "长按", carrotCruise: "CarrotCruise (进入加速限制)",
+    gestures: "两次按下的间隔在 350ms 以内时判定为双击；设为双击的按键在单击时也会等待 350ms。为「长按」指定功能后，按住 700ms 即执行。巡航 +/−(含 10 级动作) 之后每 500ms 重复一次，其余功能只执行一次；松开按键或断开连接即停止重复。使用踏板·方向盘按键、解除巡航或超过 10 秒后，需松开再重新按下。不上报按键时长的遥控器无法区分长按。测试期间所有按键都会区分这三种动作。",
+    multi: "可同时使用多个设备，并按设备分别保存映射 (最多注册 16 个，实际同时连接数视设备而定)。输入按顺序处理，超过 400ms 的指令会被丢弃。按键学习测试仅应用于所选的单个设备，其他已连接设备继续正常工作。",
+    carrotHelp: "CarrotCruise 会进入原有的加速限制模式。再次按下也不会退出，需用巡航 + 退出。实际加速限制遵循该车型的原有支持与 CarrotCruiseDecel 设置。",
+    mappingOn: "映射已开启", mappingOff: "映射已关闭", receiving: "接收输入中",
+    accelCruiseLong: "巡航 + 长按 (10级调节)", decelCruiseLong: "巡航 − 长按 (10级调节)",
+    gapAdjustCruiseLong: "间距 长按 (切换驾驶模式)", lfaButton: "LFA 键", lfaButtonLong: "LFA 长按 (切换车道线模式)",
+    cancelCruise: "取消巡航", cancelLong: "取消 长按 (关闭巡航·转向)",
+    buttonHelp: "巡航关闭时，巡航 +/− 会通过原有条件请求接管。按键的「长按」功能也可从功能列表中选择，例如：遥控器单击 → 巡航 + 长按，此时不再额外等待，直接执行一次方向盘长按。LFA 与间距功能遵循原有设置。",
+  },
 };
 const DEFAULTS = { up: "accelCruise", down: "decelCruise", left: "laneLeft", right: "laneRight", center: "paddleDecel", "1": "gapAdjustCruise", "2": "none" };
 const ACTIONS = REMOTE_ACTIONS;
 let dialog, state, selected, draft, timer, devicesSignature, busy = false, promptId, dirty = false;
-const t = (key) => WORDS[typeof LANG !== "undefined" && LANG === "ko" ? "ko" : "en"][key] || key;
+const WORDS_LANG = ["ko", "zh"].includes(typeof LANG !== "undefined" ? LANG : "") ? LANG : "en";
+const t = (key) => WORDS[WORDS_LANG][key] || WORDS.en[key] || key;
 const actionLabel = (action) => t(action === "cancel" ? "cancelCruise" : action);
 const tokenLabel = (token) => { const [base, gesture] = splitGesture(token); return `${t(base)} · ${t(gesture)}`; };
 let seenEvents = new Set();

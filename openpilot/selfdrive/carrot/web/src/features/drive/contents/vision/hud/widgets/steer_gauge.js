@@ -2,10 +2,11 @@
 
 import { createBipolarGauge } from "./bipolar_gauge.js";
 import { COLORS } from "../tokens.js";
+import { ariaText } from "../dom.js";
 
 /* steer 게이지: 조향 출력(정규화 -1..1). 우(+)=BLUE, 좌(-)=AMBER. 클러스터 동작. */
 export function createSteerGauge(doc) {
-  const gauge = createBipolarGauge(doc, { label: "steer", ariaLabel: "조향출력" });
+  const gauge = createBipolarGauge(doc, { label: "steer", ariaLabel: ariaText("hud_steer", "조향출력") });
 
   function update(data = {}) {
     const out = data.steerOutput;

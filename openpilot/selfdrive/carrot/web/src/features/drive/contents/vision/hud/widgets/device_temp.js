@@ -1,6 +1,6 @@
 "use strict";
 
-import { el, setText } from "../dom.js";
+import { el, setText, ariaText } from "../dom.js";
 
 /* 기기 CPU 온도 — 좌하단 코너 밀착 다크바.
  * 값은 가장 뜨거운 코어(max), 소수점 1자리. CPU 온도는 클러스터/네이티브와 같이
@@ -19,7 +19,7 @@ export function createDeviceTemp(doc) {
   const root = el(doc, "div", {
     class: "chud-devtemp",
     text: PLACEHOLDER,
-    attrs: { role: "status", "aria-label": "CPU 온도" },
+    attrs: { role: "status", "aria-label": ariaText("hud_cpu_temp", "CPU 온도") },
   });
 
   function update(data = {}) {

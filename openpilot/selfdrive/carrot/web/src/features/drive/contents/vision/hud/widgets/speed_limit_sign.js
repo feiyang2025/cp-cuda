@@ -1,6 +1,6 @@
 "use strict";
 
-import { svg, setText, setHidden } from "../dom.js";
+import { svg, setText, setHidden, ariaText } from "../dom.js";
 
 // 숫자 정중앙 보정: baseline을 cap-height 절반만큼 내려 시각 중심을 cy에 맞춤.
 // cap-height ≈ 0.7em → 보정 0.35em. 폰트에 따라 미세조정.
@@ -8,7 +8,7 @@ const CAP = 0.35;
 
 export function createSpeedLimitSign(doc) {
   const root = svg(doc, "svg", {
-    class: "chud-limit", viewBox: "0 0 84 84", role: "img", "aria-label": "제한속도",
+    class: "chud-limit", viewBox: "0 0 84 84", role: "img", "aria-label": ariaText("hud_speed_limit", "제한속도"),
   });
   const num = svg(doc, "text", {
     class: "chud-limit-num", x: 42, y: 42, "font-size": 42,

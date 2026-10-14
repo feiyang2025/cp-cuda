@@ -1,11 +1,11 @@
 "use strict";
 
-import { el, setText } from "../dom.js";
+import { el, setText, ariaText } from "../dom.js";
 
 /* 시계: HH:MM:SS. 외곽선(-webkit-text-stroke)로 대비 확보.
  * data.clock 있으면 사용, 없으면 로컬 시간 틱. */
 export function createClock(doc) {
-  const root = el(doc, "div", { class: "chud-clock", attrs: { role: "timer", "aria-label": "시계" } });
+  const root = el(doc, "div", { class: "chud-clock", attrs: { role: "timer", "aria-label": ariaText("hud_clock", "시계") } });
   let timer = 0;
 
   function localTime() {

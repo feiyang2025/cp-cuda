@@ -576,6 +576,30 @@ window.CarrotTranslations.register("zh", {
     carrot_navi_waiting_title: "等待地图画面",
     carrot_navi_waiting_detail: "等待首帧画面",
     carrot_navi_map_recovering: "地图解码器恢复中",
+    hud_accel: "加速度",
+
+    hud_steer: "转向输出",
+
+    hud_speed: "速度",
+
+    hud_turn_signal: "转向灯",
+
+    hud_network: "网络",
+
+    hud_cpu_temp: "CPU 温度",
+
+    hud_clock: "时钟",
+
+    hud_speed_limit: "限速",
+    playback_failed: "回放失败",
+
+    replay_playback_controls: "回放控制",
+
+    map_zoom_default: "默认",
+
+    map_zoom_in: "放大 {n}",
+
+    map_zoom_out: "缩小 {n}",
     drive_stream_busy: "正在另一台设备上使用",
     drive_stream_use_here: "在此使用",
     web_kmap_enabled: "Carrot 地图",

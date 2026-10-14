@@ -72,3 +72,10 @@ export function setCenteredSvgText(node, value, centerX, centerY) {
 export function setHidden(node, hidden) {
   node?.toggleAttribute?.("hidden", Boolean(hidden));
 }
+
+/* 스크린리더용 aria-label 도 웹 언어를 따른다. 전역 getUIText 를 쓸 수 없으면
+ * 원래 한국어 값을 그대로 쓴다. */
+export function ariaText(key, fallback) {
+  if (typeof getUIText === "function") return getUIText(key, fallback);
+  return fallback;
+}
