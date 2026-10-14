@@ -21,6 +21,7 @@ export function createCarrotNaviRuntime(options = {}) {
   const video = options.video || documentRoot?.getElementById("carrotNaviVideo");
   const overlayCanvas = options.overlayCanvas || documentRoot?.getElementById("carrotNaviOverlayCanvas");
   const statusEl = options.statusElement || documentRoot?.getElementById("carrotNaviStatus");
+  const text = (k, fallback) => (typeof target.getUIText === "function" ? target.getUIText(k, fallback) : fallback);
   const layoutSpec = options.layoutSpec || target.CarrotDriveLayoutSpec;
   const workspaceRuntime = options.workspaceRuntime || target.DriveWorkspaceRuntime;
   const workspaceApi = options.workspaceApi || target.DriveWorkspace;
@@ -266,8 +267,8 @@ function showStatus(mode, fallbackText) {
     disconnected: ["carrot_navi_disconnected", "내비 연결 끊김 · 재연결 중"],
     stalled: ["carrot_navi_map_stalled", "지도 영상 멈춤 · 복구 중"],
   };
-  const [key, defaultText] = keys[mode] || ["", fallbackText || "내비 상태 확인 중"];
-  statusEl.textContent = fallbackText || (typeof target.getUIText === "function" ? target.getUIText(key, defaultText) : defaultText);
+  const [key, defaultText] = keys[mode] || ["", fallbackText || text("carrot_navi_map_recovering", "내비 상태 확인 중")];
+  statusEl.textContent = fallbackText || (key ? text(key, defaultText) : defaultText);
   statusEl.dataset.tone = mode === "stalled" ? "warning" : mode;
   statusEl.hidden = false;
 }
@@ -284,7 +285,7 @@ function updateRuntimeStatus(now = target.performance.now(), introVisible = fals
   } else if (presentation.hasFrame && !compositor.fresh(health.thresholds.mapStaleMs, now)) {
     showStatus("stalled");
   } else if (!presentation.hasFrame || decodeError) {
-    showStatus("waiting", decodeError ? "지도 디코더 복구 중" : "");
+    showStatus("waiting", decodeError ? text("carrot_navi_map_recovering", "지도 디코더 복구 중") : "");
   } else {
     statusEl.hidden = true;
     delete statusEl.dataset.tone;
@@ -294,7 +295,7 @@ function updateRuntimeStatus(now = target.performance.now(), introVisible = fals
 function handleDecodeError(error) {
   decodeError = String(error?.message || error || "Carrot Navi decode error");
   if (environmentActive) lifecycle.transition("recovering", decodeError);
-  showStatus("waiting", "지도 디코더 복구 중");
+  showStatus("waiting", text("carrot_navi_map_recovering", "지도 디코더 복구 중"));
   requestMediaRecovery(decodeError, 120);
   void reportClientDiagnostic();
 }

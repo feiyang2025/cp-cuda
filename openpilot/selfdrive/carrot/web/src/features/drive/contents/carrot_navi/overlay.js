@@ -11,6 +11,14 @@ import {
   roundedRect,
 } from "./overlay_primitives.js";
 
+/* 내비 오버레이 문구는 웹 언어를 따른다. 바운들러 안에서는 전역 getUIText 를 쓸 수
+ * 있으므로 그대로 쓰고, 못 쓰는 환경(단위 테스트 등)에서는 한국어 원문을 쓴다. */
+function navText(key, fallback, vars = null) {
+  if (typeof getUIText === "function") return getUIText(key, fallback, vars);
+  if (!vars) return fallback;
+  return Object.entries(vars).reduce((acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)), fallback);
+}
+
 export function guidanceGlyph(guidance) {
   const label = `${guidance?.nearDirection || ""} ${guidance?.mainText || ""}`.toLowerCase();
   if (/유턴|u-?turn/.test(label)) return "↶";
@@ -385,13 +393,19 @@ export class OverlayRenderer {
         context.fill();
       }
       context.restore();
-      const sectionLabel = speed.sectionSuspended ? "구간단속 일시정지" : (speed.sectionOffRoute ? "구간 이탈" : "구간단속");
+      const sectionLabel = speed.sectionSuspended
+        ? navText("carrot_navi_section_suspended", "구간단속 일시정지")
+        : (speed.sectionOffRoute
+          ? navText("carrot_navi_section_off_route", "구간 이탈")
+          : navText("carrot_navi_section", "구간단속"));
       const textX = padding + radius * 2 + 12;
       this.drawOutlinedText(sectionLabel, textX, panelY + 31, 13, {
         color: "rgba(255,255,255,.82)",
         maxWidth: panelWidth - radius * 2 - 22,
       });
-      this.drawOutlinedText(`평균 ${Math.round(finite(speed.sectionAverageKph))} · ${formatDistance(speed.sectionRemainingDistanceM)}`, textX, panelY + 58, 14, {
+      this.drawOutlinedText(navText("carrot_navi_section_avg", "평균 {value}", {
+        value: `${Math.round(finite(speed.sectionAverageKph))} · ${formatDistance(speed.sectionRemainingDistanceM)}`,
+      }), textX, panelY + 58, 14, {
         maxWidth: panelWidth - radius * 2 - 22,
       });
     }
@@ -446,7 +460,7 @@ export class OverlayRenderer {
     });
     context.restore();
     const counter = signal.uiCounterValid ? signal.uiCounterRemainSec : 0;
-    const detail = [signal.distanceM > 0 ? formatDistance(signal.distanceM) : "", counter > 0 ? `${counter}초` : ""].filter(Boolean).join(" · ");
+    const detail = [signal.distanceM > 0 ? formatDistance(signal.distanceM) : "", counter > 0 ? navText("carrot_navi_seconds", "{count}초", { count: counter }) : ""].filter(Boolean).join(" · ");
     if (detail) this.drawOutlinedText(detail, width - padding, y + 68, 13, { align: "right", color: "rgba(255,255,255,.82)" });
   }
 
@@ -495,7 +509,7 @@ export class OverlayRenderer {
     context.strokeStyle = "rgba(103, 190, 255, .45)";
     context.stroke();
     context.restore();
-    this.drawOutlinedText("교차로", x + 12, y + 21, 14, { color: "rgba(255,255,255,.72)" });
+    this.drawOutlinedText(navText("carrot_navi_crossroad", "교차로"), x + 12, y + 21, 14, { color: "rgba(255,255,255,.72)" });
     this.drawOutlinedText(formatDistance(crossroad.distanceM), x + 12, y + 42, 18, { maxWidth: boxWidth - 24 });
     return true;
   }
@@ -533,16 +547,25 @@ export class OverlayRenderer {
       context.fillStyle = "rgba(151, 72, 14, .9)";
       context.fill();
       context.restore();
-      this.drawOutlinedText("경로 이탈 · 재탐색 중", width * 0.5, padding + 25, 14, { align: "center" });
+      this.drawOutlinedText(navText("carrot_navi_off_route_rerouting", "경로 이탈 · 재탐색 중"), width * 0.5, padding + 25, 14, { align: "center" });
     }
     const status = this.displayStatus;
     if (!status?.mode || status.mode === "live") return;
     const labels = {
-      disconnected: ["내비 연결 끊김", "TMAP 수신을 기다리는 중"],
-      stalled: ["지도 영상 멈춤", "수신 복구를 시도하는 중"],
-      waiting: ["지도 영상 대기 중", "첫 화면을 기다리는 중"],
+      disconnected: [
+        navText("carrot_navi_disconnected_title", "내비 연결 끊김"),
+        navText("carrot_navi_disconnected_detail", "TMAP 수신을 기다리는 중"),
+      ],
+      stalled: [
+        navText("carrot_navi_map_stalled_title", "지도 영상 멈춤"),
+        navText("carrot_navi_map_stalled_detail", "수신 복구를 시도하는 중"),
+      ],
+      waiting: [
+        navText("carrot_navi_waiting_title", "지도 영상 대기 중"),
+        navText("carrot_navi_waiting_detail", "첫 화면을 기다리는 중"),
+      ],
     };
-    const [title, detail] = labels[status.mode] || [String(status.title || "내비 상태 확인"), String(status.detail || "")];
+    const [title, detail] = labels[status.mode] || [String(status.title || navText("carrot_navi_status_check", "내비 상태 확인")), String(status.detail || "")];
     const panelWidth = Math.min(width * 0.56, 330);
     const panelHeight = 92;
     const x = (width - panelWidth) * 0.5;
@@ -671,7 +694,7 @@ export class OverlayRenderer {
       const leftX = mediaInset;
       const leftWidth = Math.max(0, laneLeft - leftX - mediaInset);
       if (leftWidth >= 70) {
-        const detail = [arrival, minutes ? `${minutes}분` : ""].filter(Boolean).join(" · ");
+        const detail = [arrival, minutes ? navText("carrot_navi_minutes", "{count}분", { count: minutes }) : ""].filter(Boolean).join(" · ");
         this.drawOutlinedText(formatDistance(route.remainingDistanceM), leftX, cssHeight - bottomInset - 25, clamp(cssWidth * 0.032, 16, 25), {
           maxWidth: leftWidth,
         });
