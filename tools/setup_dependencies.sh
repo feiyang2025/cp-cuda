@@ -103,7 +103,7 @@ function install_linux_deps() {
   fi
 
   if [[ -d "/etc/udev/rules.d/" ]]; then
-    $SUDO tee /etc/udev/rules.d/11-openpilot.rules > /dev/null <<-EOF
+    $SUDO tee /etc/udev/rules.d/99-openpilot.rules > /dev/null <<-EOF
 	# Panda Jungle devices
 	SUBSYSTEM=="usb", ATTRS{idVendor}=="3801", ATTRS{idProduct}=="ddcf", MODE="0666"
 	SUBSYSTEM=="usb", ATTRS{idVendor}=="3801", ATTRS{idProduct}=="ddef", MODE="0666"
@@ -122,7 +122,7 @@ function install_linux_deps() {
 	EOF
 
     # delete the old ones
-    $SUDO rm -f /etc/udev/rules.d/11-panda.rules /etc/udev/rules.d/12-panda_jungle.rules /etc/udev/rules.d/50-comma-adb.rules
+    $SUDO rm -f /etc/udev/rules.d/11-openpilot.rules /etc/udev/rules.d/11-panda.rules /etc/udev/rules.d/12-panda_jungle.rules /etc/udev/rules.d/50-comma-adb.rules
 
     $SUDO udevadm control --reload-rules && $SUDO udevadm trigger || true
   fi
