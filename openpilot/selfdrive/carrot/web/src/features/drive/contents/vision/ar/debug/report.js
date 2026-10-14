@@ -7,6 +7,7 @@
  * 범위(min~max)로만 남긴다. 길이는 수십 분의 1이 되고 정보량은 오히려 늘어난다.
  */
 
+import { arText } from "../i18n.js";
 import { timestamp } from "./format.js";
 
 function bump(map, key) {
@@ -74,19 +75,19 @@ export function createArDebugAggregate(options = {}) {
   function report() {
     const elapsed = now() - startedAt;
     const out = [
-      `AR 진단 요약  ${timestamp(elapsed)} 동안 ${counts.frames}프레임`,
-      `현재  ${last ? `${last.badge} ${last.sign}·${last.anchored}·${last.drawn} ${last.track} ${last.hold}` : "—"}`,
-      `도달  앵커생성 ${counts.withAnchor}프레임 / 렌더 ${counts.withDraw}프레임 / 최대 ${counts.sign}·${counts.anchored}·${counts.drawn}`,
-      `앵커  x ${rangeText(anchorX, "m")} · y ${rangeText(anchorY, "m")}`,
+      `${arText("rp_header", "AR 진단 요약")}  ${arText("rp_duration_frames", "{ts} 동안 {frames}프레임", { ts: timestamp(elapsed), frames: counts.frames })}`,
+      `${arText("rp_current", "현재")}  ${last ? `${last.badge} ${last.sign}·${last.anchored}·${last.drawn} ${last.track} ${last.hold}` : "—"}`,
+      `${arText("rp_reach", "도달")}  ${arText("rp_reach_line", "앵커생성 {withAnchor}프레임 / 렌더 {withDraw}프레임 / 최대 {sign}·{anchored}·{drawn}", { withAnchor: counts.withAnchor, withDraw: counts.withDraw, sign: counts.sign, anchored: counts.anchored, drawn: counts.drawn })}`,
+      `${arText("rp_anchor", "앵커")}  x ${rangeText(anchorX, "m")} · y ${rangeText(anchorY, "m")}`,
     ];
-    if (fixed) out.push(`환경  ${fixed}`);
+    if (fixed) out.push(`${arText("rp_environment", "환경")}  ${fixed}`);
     const blocks = [
-      ["상태", states], ["track", tracks], ["hold", holds], ["gate", gates],
-      ["렌더 스킵", skips], ["차단 사유", reasons],
+      [arText("rp_state", "상태"), states], ["track", tracks], ["hold", holds], ["gate", gates],
+      [arText("rp_render_skip", "렌더 스킵"), skips], [arText("rp_block_reason", "차단 사유"), reasons],
     ];
     for (const [label, map] of blocks) {
       if (!map.size) continue;
-      out.push(`─ ${label} (${map.size}종)`);
+      out.push(`─ ${label} (${arText("rp_kind_count", "{n}종", { n: map.size })})`);
       out.push(...topLines(map));
     }
     return out.join("\n");

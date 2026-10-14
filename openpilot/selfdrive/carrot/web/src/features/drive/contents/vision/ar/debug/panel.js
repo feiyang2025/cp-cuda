@@ -18,9 +18,10 @@ import { formatCanvasProbe, probeArCanvas } from "./dom_probe.js";
 import {
   calibrationLine, canvasLine, composeGate, drawnCount, num, primaryReason, summarize,
 } from "./format.js";
+import { arText } from "../i18n.js";
 
 const ACTIONS = Object.freeze([
-  Object.freeze({ id: "copy", label: "복사", payload: (ctx) => ctx.report() }),
+  Object.freeze({ id: "copy", label: arText("pn_copy", "복사"), payload: (ctx) => ctx.report() }),
   Object.freeze({ id: "json", label: "JSON", payload: (ctx) => ctx.json() }),
 ]);
 
@@ -47,7 +48,7 @@ function observationOf(status, diagnose, summary, reason) {
     anchored: num(status?.composition?.anchoredCount, 0),
     drawn: drawnCount(status),
     fixed: `surface ${formatCanvasProbe(probe)} · canvas ${canvasLine(status)} · ${
-      calibrationLine(status, diagnose)} · worker ${status?.worker?.ready ? "ok" : "대기"}`,
+      calibrationLine(status, diagnose)} · worker ${status?.worker?.ready ? "ok" : arText("fmt_waiting", "대기")}`,
   };
 }
 
@@ -73,10 +74,10 @@ export function createArDebugPanel(options = {}) {
   badge.append(badgeDot, badgeText);
   head.append(badge);
 
-  const captureButton = el(documentRoot, "button", "ar-debug__action ar-debug__action--capture", "60초 진단");
+  const captureButton = el(documentRoot, "button", "ar-debug__action ar-debug__action--capture", arText("pn_60s", "60초 진단"));
   captureButton.type = "button";
   captureButton.disabled = true;
-  captureButton.title = "리플레이 0~60초 AR 상태를 자동 수집해 JSON 파일로 저장";
+  captureButton.title = arText("pn_60s_title", "리플레이 0~60초 AR 상태를 자동 수집해 JSON 파일로 저장");
   captureButton.addEventListener("click", () => {
     const state = capture.snapshot();
     const request = state.running ? capture.stop() : capture.start();
@@ -84,17 +85,17 @@ export function createArDebugPanel(options = {}) {
   });
   head.append(captureButton);
 
-  const captureSummaryButton = el(documentRoot, "button", "ar-debug__action", "진단요약");
+  const captureSummaryButton = el(documentRoot, "button", "ar-debug__action", arText("pn_summary", "진단요약"));
   captureSummaryButton.type = "button";
   captureSummaryButton.disabled = true;
-  captureSummaryButton.title = "마지막 60초 진단의 핵심 원인과 대표 시각만 복사";
+  captureSummaryButton.title = arText("pn_summary_title", "마지막 60초 진단의 핵심 원인과 대표 시각만 복사");
   captureSummaryButton.addEventListener("click", () => {
     const payload = capture.snapshot().lastResult?.report || "";
     if (!payload) return;
     copyToClipboard(target, payload).then((ok) => {
       if (!ok) target.console?.log?.(payload);
-      captureSummaryButton.textContent = ok ? "복사됨" : "콘솔출력";
-      target.setTimeout?.(() => { captureSummaryButton.textContent = "진단요약"; }, 1200);
+      captureSummaryButton.textContent = ok ? arText("pn_copied", "복사됨") : arText("pn_console", "콘솔출력");
+      target.setTimeout?.(() => { captureSummaryButton.textContent = arText("pn_summary", "진단요약"); }, 1200);
     });
   });
   head.append(captureSummaryButton);
@@ -107,7 +108,7 @@ export function createArDebugPanel(options = {}) {
       const payload = action.payload(context);
       copyToClipboard(target, payload).then((ok) => {
         if (!ok) target.console?.log?.(payload);
-        button.textContent = ok ? "복사됨" : "콘솔출력";
+        button.textContent = ok ? arText("pn_copied", "복사됨") : arText("pn_console", "콘솔출력");
         target.setTimeout?.(() => { button.textContent = action.label; }, 1200);
       });
     });
@@ -131,7 +132,7 @@ export function createArDebugPanel(options = {}) {
 
   const reason = el(documentRoot, "div", "ar-debug__reason");
   const foot = el(documentRoot, "div", "ar-debug__foot");
-  foot.append(el(documentRoot, "span", null, "수집중"));
+  foot.append(el(documentRoot, "span", null, arText("pn_collecting", "수집중")));
   const footCount = el(documentRoot, "span", "ar-debug__footCount", "0");
   foot.append(footCount);
 
@@ -146,11 +147,11 @@ export function createArDebugPanel(options = {}) {
     captureButton.dataset.captureState = state.phase;
     captureButton.disabled = !state.running && !captureAvailable;
     captureSummaryButton.disabled = !state.lastResult?.report;
-    if (state.running) captureButton.textContent = `중지 ${elapsed}/${Math.round(state.durationSeconds)}초`;
-    else if (state.phase === "complete") captureButton.textContent = "다시 진단";
-    else if (state.phase === "warning") captureButton.textContent = "불완전·재시도";
-    else if (state.phase === "error") captureButton.textContent = "진단 재시도";
-    else captureButton.textContent = "60초 진단";
+    if (state.running) captureButton.textContent = arText("pn_stop", "중지 {elapsed}/{total}초", { elapsed, total: Math.round(state.durationSeconds) });
+    else if (state.phase === "complete") captureButton.textContent = arText("pn_rerun", "다시 진단");
+    else if (state.phase === "warning") captureButton.textContent = arText("pn_incomplete", "불완전·재시도");
+    else if (state.phase === "error") captureButton.textContent = arText("pn_retry", "진단 재시도");
+    else captureButton.textContent = arText("pn_60s", "60초 진단");
     if (state.error) captureButton.title = state.error;
   });
 
@@ -184,7 +185,7 @@ export function createArDebugPanel(options = {}) {
     reason.hidden = !why;
 
     aggregate.observe(observationOf(status, diagnose, summary, why));
-    footCount.textContent = `${aggregate.frames}프레임`;
+    footCount.textContent = arText("pn_frames", "{n}프레임", { n: aggregate.frames });
   }
 
   return Object.freeze({

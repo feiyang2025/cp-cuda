@@ -7,6 +7,7 @@
  */
 
 import { readWebSettingUnlocked } from "../../../../../shared/web/capabilities.js";
+import { arText } from "./i18n.js";
 
 export const VISION_AR_SETTING_KEY = "vision_ar_enabled";
 export const VISION_AR_AVAILABLE = true;
@@ -64,7 +65,7 @@ export function createVisionArActivationGate(options = {}) {
     }
     try {
       runtime ||= createRuntime();
-      if (!runtime) throw new Error("AR runtime을 만들 수 없습니다");
+      if (!runtime) throw new Error(arText("gate_no_runtime", "AR runtime을 만들 수 없습니다"));
       lastError = "";
       runtime.activate?.();
       return true;

@@ -8,6 +8,7 @@
  */
 
 import { describeMarkers } from "./tmap_catalog.js";
+import { arText } from "./i18n.js";
 import { signboardFromMarker } from "./signboard.js";
 import { AR_MARKER_KIND, AR_PHASE, phaseForDistance } from "./tokens.js";
 import { discoveryRangeM, isWithinDiscoveryRange } from "./discovery.js";
@@ -90,7 +91,7 @@ export function collectSigns(input = {}, options = {}) {
     // a real maneuver direction made replay users mistake the synthetic cue
     // for persistent TMap straight guidance.
     turn: { direction: "", sign: 0 },
-    label: "AR 표시 확인", phase: phaseForDistance(distanceM, egoSpeedMps),
+    label: arText("compose_probe", "AR 표시 확인"), phase: phaseForDistance(distanceM, egoSpeedMps),
   });
   if (!descriptor) return [];
   const identityInput = { descriptor, source: "calibrationProbe" };

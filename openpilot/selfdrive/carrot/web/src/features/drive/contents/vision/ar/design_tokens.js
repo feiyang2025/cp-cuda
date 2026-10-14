@@ -20,6 +20,8 @@
 /** 사용자 승인 self-contained preview의 고정 출처.
  * application code를 읽을 수 있게 나눈 것이 이 모듈이며, 값이나 파생 관계를
  * 바꿀 때에는 preview와 이 hash 계약을 함께 갱신해야 한다. */
+import { arText } from "./i18n.js";
+
 export const AR_TOKEN_PREVIEW_CONTRACT = Object.freeze({
   file: "carrot_ar_token_preview.html",
   sha256: "f5395c5eabfeb6bfb55fb2a14e0e10665fee23076e3220187fac54abbe42336f",
@@ -271,11 +273,11 @@ export function assertScaleConsistency() {
   const bar = AR_FORM[AR_SHAPE.BAR];
   const aspect = +(bar.widthM / bar.heightM).toFixed(3);
   if (Math.abs(aspect - AR_BAR_ASPECT) > 1e-6) {
-    issues.push(`BAR 종횡비 ${aspect} != AR_BAR_ASPECT ${AR_BAR_ASPECT}`);
+    issues.push(arText("token_bar_aspect", "BAR 종횡비 {a} != AR_BAR_ASPECT {b}", { a: aspect, b: AR_BAR_ASPECT }));
   }
 
   const texAspect = +(AR_TEXTURE.barWidthPx / AR_TEXTURE.barHeightPx).toFixed(2);
-  if (texAspect !== +aspect.toFixed(2)) issues.push(`텍스처 종횡비 ${texAspect} != 보드 ${aspect}`);
+  if (texAspect !== +aspect.toFixed(2)) issues.push(arText("token_tex_aspect", "텍스처 종횡비 {a} != 보드 {b}", { a: texAspect, b: aspect }));
 
   // 공통분모 1: 모든 표지가 같은 높이여야 한다.
   const heights = {
@@ -286,7 +288,7 @@ export function assertScaleConsistency() {
   };
   for (const [k, v] of Object.entries(heights)) {
     if (Math.abs(v - AR_SIGN_HEIGHT_M) > 1e-6) {
-      issues.push(`${k} 높이 ${v} != 공통 ${AR_SIGN_HEIGHT_M}`);
+      issues.push(arText("token_height", "{k} 높이 {v} != 공통 {s}", { k, v, s: AR_SIGN_HEIGHT_M }));
     }
   }
 
@@ -297,24 +299,24 @@ export function assertScaleConsistency() {
     pinHead: AR_FORM[AR_SHAPE.PIN].headDiameterM,
   };
   for (const [k, v] of Object.entries(badges)) {
-    if (Math.abs(v - AR_BADGE_M) > 1e-6) issues.push(`${k} 폭 ${v} != AR_BADGE_M ${AR_BADGE_M}`);
+    if (Math.abs(v - AR_BADGE_M) > 1e-6) issues.push(arText("token_width", "{k} 폭 {v} != AR_BADGE_M {s}", { k, v, s: AR_BADGE_M }));
   }
 
   // 투명도 토큰 범위
   for (const [k, v] of Object.entries(AR_OPACITY)) {
-    if (!(v > 0 && v <= 1)) issues.push(`AR_OPACITY.${k} 범위 밖: ${v}`);
+    if (!(v > 0 && v <= 1)) issues.push(arText("token_opacity", "AR_OPACITY.{k} 범위 밖: {v}", { k, v }));
   }
 
   const typeRatio = +(AR_TYPE.primaryPx / AR_TYPE.secondaryPx).toFixed(2);
   const wantType = +Math.pow(AR_RATIO, 2).toFixed(2);
   if (Math.abs(typeRatio - wantType) > 0.06) {
-    issues.push(`타이포 비 ${typeRatio} != RATIO^2 ${wantType}`);
+    issues.push(arText("token_typography", "타이포 비 {a} != RATIO^2 {b}", { a: typeRatio, b: wantType }));
   }
 
   for (const [k, v] of Object.entries(AR_SCALE)) {
-    if (!Number.isFinite(v) || v <= 0) issues.push(`AR_SCALE.${k} 비정상: ${v}`);
+    if (!Number.isFinite(v) || v <= 0) issues.push(arText("token_scale", "AR_SCALE.{k} 비정상: {v}", { k, v }));
   }
-  if (AR_TEXTURE.barWidthPx > AR_TEXTURE.maxPx) issues.push("텍스처가 2k 권고를 넘음");
+  if (AR_TEXTURE.barWidthPx > AR_TEXTURE.maxPx) issues.push(arText("token_texture_2k", "텍스처가 2k 권고를 넘음"));
 
   return Object.freeze({
     ok: issues.length === 0, issues: Object.freeze(issues),

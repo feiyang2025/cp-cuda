@@ -1,5 +1,7 @@
 "use strict";
 
+import { arText } from "../i18n.js";
+
 /* AR 캔버스의 실제 화면 상태를 DOM에서 직접 확인한다.
  *
  * 워커는 OffscreenCanvas에 그리므로 "그렸다(drawn>0)"와 "사람이 볼 수 있다"는
@@ -20,7 +22,7 @@ function rectOf(element) {
 
 /** 짧게. id가 있으면 id만, 없으면 첫 클래스 하나만 쓴다(패널이 좁다). */
 function describe(element) {
-  if (!element) return "없음";
+  if (!element) return arText("dp_none", "없음");
   const tag = String(element.tagName || "?").toLowerCase();
   if (element.id) return `${tag}#${element.id}`;
   const cls = typeof element.className === "string" && element.className.trim()
@@ -69,15 +71,15 @@ export function probeArCanvas(target = globalThis, options = {}) {
 
 /** 패널/로그가 함께 쓰는 한 줄 표현. */
 export function formatCanvasProbe(probe) {
-  if (!probe) return "캔버스 없음";
+  if (!probe) return arText("dp_no_canvas", "캔버스 없음");
   const { rect, style } = probe;
-  if (!rect) return "rect 없음";
+  if (!rect) return arText("dp_no_rect", "rect 없음");
   const size = `${rect.w}x${rect.h}@${rect.x},${rect.y}`;
   const hidden = style.display === "none" || style.visibility === "hidden"
     || Number(style.opacity) === 0;
   const bits = [size, `z${style.zIndex || "auto"}`];
-  if (hidden) bits.push(`숨김(${style.display}/${style.visibility}/${style.opacity})`);
-  if (!(rect.w > 0 && rect.h > 0)) bits.push("크기0");
-  if (probe.coveredBy && probe.coveredBy !== "없음") bits.push(`위:${probe.coveredBy}`);
+  if (hidden) bits.push(arText("dp_hidden", "숨김({display}/{visibility}/{opacity})", { display: style.display, visibility: style.visibility, opacity: style.opacity }));
+  if (!(rect.w > 0 && rect.h > 0)) bits.push(arText("dp_zero_size", "크기0"));
+  if (probe.coveredBy && probe.coveredBy !== arText("dp_none", "없음")) bits.push(arText("dp_above", "위:{value}", { value: probe.coveredBy }));
   return bits.join(" ");
 }

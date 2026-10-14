@@ -6,6 +6,8 @@
  * 패널·로그·JSON이 같은 문자열을 쓰게 한다.
  */
 
+import { arText } from "../i18n.js";
+
 export const TONE = Object.freeze({
   OK: "ok", WARN: "warn", IDLE: "idle", OFF: "off",
 });
@@ -37,15 +39,15 @@ export function onOff(value) {
 /** 파이프라인 어디까지 왔는지 한 줄 판정. 패널 헤더와 로그 서명이 공유한다. */
 export function summarize(status) {
   if (!status || status.active !== true) {
-    return { tone: TONE.OFF, label: "AR 꺼짐", hint: "주행화면 비활성" };
+    return { tone: TONE.OFF, label: arText("fmt_ar_off", "AR 꺼짐"), hint: arText("fmt_drive_inactive", "주행화면 비활성") };
   }
   const sign = num(status.composition?.signCount, 0) ?? 0;
   const anchored = num(status.composition?.anchoredCount, 0) ?? 0;
   const drawn = drawnCount(status);
-  if (drawn > 0) return { tone: TONE.OK, label: "표시중", hint: `그림 ${drawn}` };
-  if (anchored > 0) return { tone: TONE.WARN, label: "앵커O·렌더X", hint: "렌더러가 못 그림" };
-  if (sign > 0) return { tone: TONE.WARN, label: "표지O·앵커X", hint: "앵커 생성 실패" };
-  return { tone: TONE.IDLE, label: "표지 없음", hint: "안내/후보 없음" };
+  if (drawn > 0) return { tone: TONE.OK, label: arText("fmt_showing", "표시중"), hint: arText("fmt_drew", "그림 {n}", { n: drawn }) };
+  if (anchored > 0) return { tone: TONE.WARN, label: arText("fmt_anchor_only", "앵커O·렌더X"), hint: arText("fmt_cant_draw", "렌더러가 못 그림") };
+  if (sign > 0) return { tone: TONE.WARN, label: arText("fmt_sign_only", "표지O·앵커X"), hint: arText("fmt_anchor_failed", "앵커 생성 실패") };
+  return { tone: TONE.IDLE, label: arText("fmt_no_sign", "표지 없음"), hint: arText("fmt_no_guidance", "안내/후보 없음") };
 }
 
 /** compose가 워커 안에서 본 입력. 앵커 실패 원인이 여기서 드러난다. */
@@ -159,7 +161,7 @@ export function positionQualityReason(status) {
 export function timelineLine(status) {
   const t = status?.timeline;
   if (!t) return "—";
-  return `${t.domain || "—"} ${t.discontinuity ? `끊김(${t.discontinuityReason || "?"})` : "연속"}`;
+  return `${t.domain || "—"} ${t.discontinuity ? arText("fmt_broken", "끊김({why})", { why: t.discontinuityReason || "?" }) : arText("fmt_continuous", "연속")}`;
 }
 
 /* target이 최신 관측보다 maxExtrapolationMs 이상 앞서면 sampleAt이 null을 주고
@@ -177,16 +179,16 @@ export function odometryTimelineLine(status) {
 export function worldPoseLine(status) {
   const w = status?.worldPose;
   if (!w) return "—";
-  return w.initialized ? `init · ${num(w.integrations, 0)}회` : "미초기화";
+  return w.initialized ? `init · ${num(w.integrations, 0)}회` : arText("fmt_uninitialized", "미초기화");
 }
 
 /* ---------- 리플레이/성능 ---------- */
 
 export function replayLine(diagnose) {
   const r = diagnose?.replay;
-  if (!r) return "라이브";
+  if (!r) return arText("fmt_live", "라이브");
   const time = r.currentTime === undefined ? "" : ` ${Number(r.currentTime).toFixed(1)}s`;
-  return `${r.active ? "재생" : "정지"}${r.loading ? "·로딩" : ""}${time} ${r.segment || ""}`.trim();
+  return `${r.active ? arText("fmt_playing", "재생") : arText("fmt_stopped", "정지")}${r.loading ? arText("fmt_loading", "·로딩") : ""}${time} ${r.segment || ""}`.trim();
 }
 
 export function frameSignalLine(diagnose) {
@@ -198,7 +200,7 @@ export function frameSignalLine(diagnose) {
 export function performanceLine(status) {
   const bits = [status?.mode || "—", `fps ${num(status?.currentFps, "—")}`, `frames ${num(status?.frames, 0)}`];
   const w = status?.worker;
-  if (w) bits.push(`worker ${w.ready ? "ok" : "대기"}${w.broken ? `·${w.broken}` : ""}`);
+  if (w) bits.push(`worker ${w.ready ? "ok" : arText("fmt_waiting", "대기")}${w.broken ? `·${w.broken}` : ""}`);
   return bits.join(" · ");
 }
 

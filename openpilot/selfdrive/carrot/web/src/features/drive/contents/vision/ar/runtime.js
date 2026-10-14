@@ -33,6 +33,7 @@ import {
 } from "./pose_timeline.js";
 import { createArTrackingState } from "./tracking_state.js";
 import { createDeviceWorldPose } from "./world_pose.js";
+import { arText, setArLanguage } from "./i18n.js";
 import {
   AR_COORDINATE_FRAME,
   AR_LIVE_POSE_FRAMES,
@@ -68,11 +69,11 @@ function createWorkerPipe({ host, documentRoot, target, options, onBroken, onDra
     const resolve = options.resolveAssetUrl
       || ((id) => target.CarrotAssetUrl?.resolve?.(id));
     const url = String(resolve(AR_WORKER_ASSET_ID) || "");
-    if (!url) throw new Error("AR worker asset URL 없음");
+    if (!url) throw new Error(arText("rt_no_worker_url", "AR worker asset URL 없음"));
     worker = new target.Worker(url);
   } catch (error) {
     canvas.remove?.();
-    target.console?.warn?.("[carrot] AR 워커 시작 실패 — AR 숨김:", error?.message || error);
+    target.console?.warn?.(arText("rt_worker_start_failed", "[carrot] AR 워커 시작 실패 — AR 숨김:"), error?.message || error);
     return null;
   }
 
@@ -190,16 +191,6 @@ function createWorkerPipe({ host, documentRoot, target, options, onBroken, onDra
     return true;
   }
 
-  /** 워커엔 <html lang> 이 없으므로 표지 문구 언어를 프레임에 실어 보낸다. */
-  function currentWebLanguage() {
-    try {
-      const raw = String(documentRoot?.documentElement?.lang || target.document?.documentElement?.lang || "").toLowerCase();
-      if (raw.startsWith("zh")) return "zh";
-      if (raw.startsWith("en")) return "en";
-      if (raw.startsWith("ko")) return "ko";
-    } catch (_) { /* ignore */ }
-    return "";
-  }
 
   function compactPayload(payload = {}) {
     const rawComposeInput = payload.composeInput || {};
@@ -260,7 +251,7 @@ function createWorkerPipe({ host, documentRoot, target, options, onBroken, onDra
   } catch (error) {
     canvas.remove?.();
     worker.terminate?.();
-    target.console?.warn?.("[carrot] OffscreenCanvas 이전 실패 — AR 숨김:", error?.message || error);
+    target.console?.warn?.(arText("rt_offscreen_failed", "[carrot] OffscreenCanvas 이전 실패 — AR 숨김:"), error?.message || error);
     return null;
   }
 
@@ -534,6 +525,17 @@ export function resolveArTimeline(target = globalThis, monotonicNowMs = 0) {
   });
 }
 
+/** 웹 언어를 ko/en/zh 중 하나로 정규화한다. 워커에는 DOM 이 없어 여기서 읽는다. */
+function currentWebLanguage() {
+  try {
+    const raw = String(globalThis.document?.documentElement?.lang || "").toLowerCase();
+    if (raw.startsWith("zh")) return "zh";
+    if (raw.startsWith("en")) return "en";
+    if (raw.startsWith("ko")) return "ko";
+  } catch (_) { /* ignore */ }
+  return "";
+}
+
 export function createArRuntime(options = {}) {
   const target = options.target || globalThis;
   const documentRoot = options.document || target.document;
@@ -550,6 +552,8 @@ export function createArRuntime(options = {}) {
     now: () => target.performance?.now?.() ?? Date.now(),
   });
   const diagnosticProbeEnabled = options.diagnosticProbe === true;
+  // 메인 스레드에서 실행되는 AR 진단 문구도 웹 언어를 따라간다(워커는 frame payload 로 받음).
+  setArLanguage(currentWebLanguage());
   // May be a boolean or a live source (function); the store resolves it.
   const bypassWorldAnchor = options.bypassWorldAnchor ?? false;
   let workerFailureHandler = () => {};
@@ -1217,29 +1221,29 @@ export function createArRuntime(options = {}) {
     const composition = (workerPipe ? workerStatus?.composition : lastComposition) || null;
     const problems = [];
     const diagnoseNow = target.performance?.now?.() ?? Date.now();
-    if (!active) problems.push("AR 런타임 비활성 (주행화면이 활성인지 확인)");
+    if (!active) problems.push(arText("rt_inactive", "AR 런타임 비활성 (주행화면이 활성인지 확인)"));
     if (active && diagnoseNow - activatedAt >= 1000 && presentedSignals === 0) {
-      problems.push("presented-frame 신호가 들어오지 않음");
+      problems.push(arText("rt_no_presented", "presented-frame 신호가 들어오지 않음"));
     }
-    if (!provider) problems.push("CarrotDriveLiveStateProvider 없음");
-    if (!stage) problems.push("CarrotVisionStageTransform 없음 (영상이 렌더 중인지 확인)");
-    if (!modelV2) problems.push("modelV2 없음");
-    else if (!Array.isArray(modelV2?.position?.x)) problems.push("modelV2.position.x 없음");
-    if (!o.roadCameraState) problems.push("roadCameraState 없음");
-    if (!o.liveCalibration) problems.push("liveCalibration 없음");
+    if (!provider) problems.push(arText("rt_no_provider", "CarrotDriveLiveStateProvider 없음"));
+    if (!stage) problems.push(arText("rt_no_stage", "CarrotVisionStageTransform 없음 (영상이 렌더 중인지 확인)"));
+    if (!modelV2) problems.push(arText("rt_no_modelv2", "modelV2 없음"));
+    else if (!Array.isArray(modelV2?.position?.x)) problems.push(arText("rt_no_modelv2_pos", "modelV2.position.x 없음"));
+    if (!o.roadCameraState) problems.push(arText("rt_no_roadcamera", "roadCameraState 없음"));
+    if (!o.liveCalibration) problems.push(arText("rt_no_calibration", "liveCalibration 없음"));
     if (lastSync && !lastSync.canDrawPrecise) problems.push("AR gate 차단: " + lastSync.reasons.join(", "));
     const drawn = workerPipe ? (workerStatus?.renderer?.drawn ?? null) : renderer.status().drawn;
     if (workerPipe && workerStatus?.broken) problems.push("AR 워커 오류: " + workerStatus.broken);
-    if (workerPipe && !workerStatus?.ready) problems.push("AR 워커 준비 중");
+    if (workerPipe && !workerStatus?.ready) problems.push(arText("rt_worker_pending", "AR 워커 준비 중"));
     if (drawn === 0 && problems.length === 0) {
       if (composition?.signCount === 0) {
-        problems.push("AR 마커 후보 없음");
+        problems.push(arText("rt_no_candidates", "AR 마커 후보 없음"));
       } else if (composition?.anchoredCount === 0) {
-        problems.push("AR 마커는 있으나 model/geo 앵커를 만들지 못함");
+        problems.push(arText("rt_no_anchor", "AR 마커는 있으나 model/geo 앵커를 만들지 못함"));
       } else if (workerStatus?.renderer?.lastReason) {
         problems.push("AR 렌더러가 프레임을 건너뜀: " + workerStatus.renderer.lastReason);
       } else {
-        problems.push("AR 마커와 앵커는 있으나 렌더러가 그리지 못함");
+        problems.push(arText("rt_not_drawn", "AR 마커와 앵커는 있으나 렌더러가 그리지 못함"));
       }
     }
     return Object.freeze({

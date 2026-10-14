@@ -21,6 +21,7 @@ import { composeFrame } from "./compose.js";
 import { createMarkerIdentityTracker } from "./marker_identity.js";
 import { createRouteMatcher } from "./route_matcher.js";
 import { setSignboardLanguage } from "./signboard.js";
+import { arText, setArLanguage } from "./i18n.js";
 import { createRenderPerformancePolicy } from "./performance_policy.js";
 import { createDeviceWorldPose } from "./world_pose.js";
 
@@ -52,7 +53,7 @@ function init(canvas, performanceOptions) {
         reply({ type: "error", error: failed, backend: "three" });
       },
     });
-    if (!renderer) throw new Error("renderer 생성 실패");
+    if (!renderer) throw new Error(arText("worker_renderer_failed", "renderer 생성 실패"));
     anchorStore = createContinuousAnchorStore();
     identityTracker = createMarkerIdentityTracker();
     routeMatcher = createRouteMatcher();
@@ -73,7 +74,7 @@ function drawFrame(payload = {}) {
     return;
   }
   const workStartedAt = workerNowMs();
-  if (payload.language) setSignboardLanguage(payload.language);
+  if (payload.language) { setSignboardLanguage(payload.language); setArLanguage(payload.language); }
   if (payload.timelineDiscontinuity === true) {
     anchorStore.reset();
     identityTracker.reset();

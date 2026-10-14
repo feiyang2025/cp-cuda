@@ -16,6 +16,7 @@
  * 예산을 넘으면 숨긴다. 틀린 위치의 표지보다 없는 표지가 낫다(Phase 3 와 같은 원칙).
  */
 
+import { arText } from "./i18n.js";
 import {
   roadFrameFields,
   roadFrameForAnchor,
@@ -139,7 +140,7 @@ export function createAnchorHold(options = {}) {
   let driftM = 0;
   let lastAtMs = null;
   let state = AR_HOLD_STATE.DROPPED;
-  let reason = "아직 유효한 앵커 없음";
+  let reason = arText("anchor_none_valid", "아직 유효한 앵커 없음");
 
   function reset() {
     anchors = null;
@@ -147,7 +148,7 @@ export function createAnchorHold(options = {}) {
     driftM = 0;
     lastAtMs = null;
     state = AR_HOLD_STATE.DROPPED;
-    reason = "초기화됨";
+    reason = arText("anchor_initialized", "초기화됨");
   }
 
   /**
@@ -173,7 +174,7 @@ export function createAnchorHold(options = {}) {
 
     if (!anchors) {
       state = AR_HOLD_STATE.DROPPED;
-      reason = "유지할 앵커 없음";
+      reason = arText("anchor_none_keep", "유지할 앵커 없음");
       return { state, anchors: null, holdMs, driftM, reason };
     }
 
@@ -181,7 +182,7 @@ export function createAnchorHold(options = {}) {
     if (input.canHold !== true) {
       reset();
       state = AR_HOLD_STATE.DROPPED;
-      reason = "odometry 신뢰 불가 — 유지 포기";
+      reason = arText("anchor_odometry_untrusted", "odometry 신뢰 불가 — 유지 포기");
       return { state, anchors: null, holdMs, driftM, reason };
     }
 
@@ -189,7 +190,7 @@ export function createAnchorHold(options = {}) {
     // 적분하지 않는다. 실제 seek/domain/session 경계 reset은 runtime 계약이 맡는다.
     if (dtMs > limits.maxStepMs) {
       state = AR_HOLD_STATE.HELD;
-      reason = `프레임 간격 ${Math.round(dtMs)}ms — 앵커 유지, 적분 생략`;
+      reason = arText("anchor_frame_gap", "프레임 간격 {ms}ms — 앵커 유지, 적분 생략", { ms: Math.round(dtMs) });
       return { state, anchors, holdMs, driftM, reason };
     }
 
@@ -200,7 +201,7 @@ export function createAnchorHold(options = {}) {
     if (holdMs > limits.maxHoldMs) {
       reset();
       state = AR_HOLD_STATE.DROPPED;
-      reason = `유지 시간 초과 (${limits.maxHoldMs}ms)`;
+      reason = arText("anchor_hold_timeout", "유지 시간 초과 ({ms}ms)", { ms: limits.maxHoldMs });
       return { state, anchors: null, holdMs, driftM, reason };
     }
 
@@ -219,13 +220,13 @@ export function createAnchorHold(options = {}) {
       const exceeded = driftM;
       reset();
       state = AR_HOLD_STATE.DROPPED;
-      reason = `누적 드리프트 ${exceeded.toFixed(2)}m > ${limits.maxDriftM}m`;
+      reason = arText("anchor_drift_exceeded", "누적 드리프트 {drift}m > {limit}m", { drift: exceeded.toFixed(2), limit: limits.maxDriftM });
       return { state, anchors: null, holdMs, driftM: exceeded, reason };
     }
 
     anchors = next;
     state = AR_HOLD_STATE.HELD;
-    reason = `유지 중 ${Math.round(holdMs)}ms / 드리프트 ${driftM.toFixed(2)}m`;
+    reason = arText("anchor_holding", "유지 중 {ms}ms / 드리프트 {drift}m", { ms: Math.round(holdMs), drift: driftM.toFixed(2) });
     return { state, anchors, holdMs, driftM, reason };
   }
 

@@ -5,6 +5,7 @@
  * anchor를 거부하는 교차검증용이며, 거부 시 근거리 model-path anchor로 강등한다.
  */
 
+import { arText } from "./i18n.js";
 import { enuOffset } from "./geo.js";
 import { AR_POSITION_QUALITY } from "./tokens.js";
 
@@ -53,18 +54,18 @@ export function evaluateGeoPositionQuality(input = {}, limits = AR_POSITION_QUAL
   const routeReasons = [];
 
   if (input.naviUsable !== true) {
-    reasons.push("Navi 위치 source 비활성");
-    routeReasons.push("Navi 경로 source 비활성");
+    reasons.push(arText("pq_navi_pos_source", "Navi 위치 source 비활성"));
+    routeReasons.push(arText("pq_navi_route_source", "Navi 경로 source 비활성"));
   }
   const naviCoordinateValid = vehicle?.present !== false
     && validCoordinate(vehicle?.latitude, vehicle?.longitude)
     && finite(vehicle?.headingDeg) !== null;
   if (!naviCoordinateValid) {
-    reasons.push("TMap vehicle 좌표/방향 없음");
-    routeReasons.push("TMap vehicle 좌표/방향 없음");
+    reasons.push(arText("pq_tmap_missing", "TMap vehicle 좌표/방향 없음"));
+    routeReasons.push(arText("pq_tmap_missing", "TMap vehicle 좌표/방향 없음"));
   }
   const routePolylineValid = validRoutePolyline(input.naviRoutePolyline);
-  if (!routePolylineValid) routeReasons.push("TMap route polyline 없음");
+  if (!routePolylineValid) routeReasons.push(arText("pq_tmap_route", "TMap route polyline 없음"));
   const canUseRoute = routeReasons.length === 0;
 
   const replayClock = input.clockDomain === "replay-media";
@@ -73,18 +74,18 @@ export function evaluateGeoPositionQuality(input = {}, limits = AR_POSITION_QUAL
     input.receivedAtMonotonic,
     "gpsLocationExternal",
   );
-  if (gpsAgeMs === null) reasons.push("Comma GPS 수신시각 없음");
+  if (gpsAgeMs === null) reasons.push(arText("pq_gps_ts", "Comma GPS 수신시각 없음"));
   else if (gpsAgeMs > limits.maxGpsAgeMs) reasons.push(`Comma GPS age ${gpsAgeMs.toFixed(0)}ms`);
 
   const gpsCoordinateValid = gps?.hasFix === true
     && validCoordinate(gps?.latitude, gps?.longitude);
-  if (!gpsCoordinateValid) reasons.push("Comma GPS fix/좌표 없음");
+  if (!gpsCoordinateValid) reasons.push(arText("pq_gps_fix", "Comma GPS fix/좌표 없음"));
 
   const horizontalAccuracyM = finite(gps?.horizontalAccuracy);
   if (horizontalAccuracyM === null || horizontalAccuracyM < 0) {
-    reasons.push("Comma GPS 수평 정확도 없음");
+    reasons.push(arText("pq_gps_hacc", "Comma GPS 수평 정확도 없음"));
   } else if (horizontalAccuracyM > limits.maxHorizontalAccuracyM) {
-    reasons.push(`Comma GPS 수평 오차 ${horizontalAccuracyM.toFixed(1)}m`);
+    reasons.push(arText("pq_gps_herr", "Comma GPS 수평 오차 {v}m", { v: horizontalAccuracyM.toFixed(1) }));
   }
 
   let separationM = null;
@@ -101,7 +102,7 @@ export function evaluateGeoPositionQuality(input = {}, limits = AR_POSITION_QUAL
       Math.max(0, horizontalAccuracyM ?? 0) * limits.separationAccuracyMultiplier,
     );
     if (separationM === null || separationM > separationLimitM) {
-      reasons.push(`TMap/Comma 위치 불일치 ${separationM?.toFixed(1) ?? "n/a"}m`);
+      reasons.push(arText("pq_pos_mismatch", "TMap/Comma 위치 불일치 {v}m", { v: separationM?.toFixed(1) ?? "n/a" }));
     }
   }
 
@@ -113,12 +114,12 @@ export function evaluateGeoPositionQuality(input = {}, limits = AR_POSITION_QUAL
   if (shouldCheckBearing) {
     if (bearingAccuracyDeg === null || bearingAccuracyDeg < 0
         || bearingAccuracyDeg > limits.maxBearingAccuracyDeg) {
-      reasons.push("Comma GPS 진행방향 정확도 부족");
+      reasons.push(arText("pq_heading_acc", "Comma GPS 진행방향 정확도 부족"));
     } else {
       headingDisagreementDeg = headingDifferenceDeg(vehicle?.headingDeg, gps?.bearingDeg);
       if (headingDisagreementDeg === null
           || headingDisagreementDeg > limits.maxHeadingDisagreementDeg) {
-        reasons.push(`TMap/Comma 방향 불일치 ${headingDisagreementDeg?.toFixed(1) ?? "n/a"}°`);
+        reasons.push(arText("pq_heading_mismatch", "TMap/Comma 방향 불일치 {v}°", { v: headingDisagreementDeg?.toFixed(1) ?? "n/a" }));
       }
     }
   }

@@ -1,5 +1,7 @@
 "use strict";
 
+import { arText } from "../i18n.js";
+
 /* One-click replay diagnostic capture.
  *
  * The collector drives the real replay surface at 1x and records worker
@@ -570,7 +572,7 @@ function captureSummary(session) {
 
 function seconds(value) {
   const milliseconds = finite(value);
-  return milliseconds === null ? "—" : `${(milliseconds / 1000).toFixed(2)}초`;
+  return milliseconds === null ? "—" : arText("cap_seconds", "{v}초", { v: (milliseconds / 1000).toFixed(2) });
 }
 
 function countLines(title, counts, limit = 5) {
@@ -584,23 +586,23 @@ export function formatArReplayDiagnosticReport(payload = {}) {
   const coverage = summary.coverage || {};
   const replay = payload.replay || {};
   const lines = [
-    "AR 리플레이 진단 요약",
-    `구간: ${replay.segment || "—"}`,
-    `판정: ${coverage.complete ? "수집 완료" : "수집 불완전"} · 종료 ${payload.stopReason || "—"}`,
-    `범위: ${seconds(coverage.firstMediaTimeMs)} ~ ${seconds(coverage.lastMediaTimeMs)} / 요청 ${seconds(coverage.requestedEndMs)}`,
-    `프레임: ${summary.frames || 0} · 실효 ${finite(coverage.effectiveFps, 0).toFixed(2)}fps · 이벤트 ${summary.events || 0}`,
-    `상태전환: Navi ${summary.transitions?.naviUsable || 0} · 표시 ${summary.transitions?.visibility || 0} · tracking ${summary.transitions?.tracking || 0} · hold ${summary.transitions?.hold || 0}`,
-    `Navi: 유효 ${summary.navi?.usableFrames || 0} · 무효 ${summary.navi?.unusableFrames || 0} · 시계불일치 ${summary.navi?.clockMismatchFrames || 0}`,
-    `worldPose: 적분 프레임 ${summary.worldPose?.integratedFrames || 0} · 최대 ${summary.worldPose?.maxIntegrations || 0}`,
-    `새 앵커 보류: ${summary.worldPose?.anchorCreationDeferredFrames || 0}프레임`,
-    `Worker: DPR 최대 ${finite(summary.transport?.maxDpr, 0).toFixed(2)} · 대기 ${summary.transport?.queue?.deferred || 0} · 교체 ${summary.transport?.queue?.replaced || 0} · 폐기 ${summary.transport?.queue?.discarded || 0}`,
-    `앵커: x ${summary.anchorRange?.x?.join(" ~ ") || "—"}m · y ${summary.anchorRange?.y?.join(" ~ ") || "—"}m`,
-    `플래그: ${summary.flags?.length ? summary.flags.join(", ") : "없음"}`,
-    ...countLines("마커 상태", summary.markerStates, 10),
-    ...countLines("주요 tracking 차단", summary.reasons?.tracking),
-    ...countLines("주요 sync 차단", summary.reasons?.sync),
-    ...countLines("새 앵커 보류 사유", summary.worldPose?.anchorCreationGateReasons),
-    ...countLines("이벤트", summary.eventTypes, 10),
+    arText("cap_report_title", "AR 리플레이 진단 요약"),
+    arText("cap_line_segment", "구간: {value}", { value: replay.segment || "—" }),
+    arText("cap_line_verdict", "판정: {verdict} · 종료 {stop}", { verdict: coverage.complete ? arText("cap_complete", "수집 완료") : arText("cap_incomplete", "수집 불완전"), stop: payload.stopReason || "—" }),
+    arText("cap_line_range", "범위: {from} ~ {to} / 요청 {requested}", { from: seconds(coverage.firstMediaTimeMs), to: seconds(coverage.lastMediaTimeMs), requested: seconds(coverage.requestedEndMs) }),
+    arText("cap_line_frames", "프레임: {frames} · 실효 {fps}fps · 이벤트 {events}", { frames: summary.frames || 0, fps: finite(coverage.effectiveFps, 0).toFixed(2), events: summary.events || 0 }),
+    arText("cap_line_transitions", "상태전환: Navi {navi} · 표시 {visibility} · tracking {tracking} · hold {hold}", { navi: summary.transitions?.naviUsable || 0, visibility: summary.transitions?.visibility || 0, tracking: summary.transitions?.tracking || 0, hold: summary.transitions?.hold || 0 }),
+    arText("cap_line_navi", "Navi: 유효 {usable} · 무효 {unusable} · 시계불일치 {clock}", { usable: summary.navi?.usableFrames || 0, unusable: summary.navi?.unusableFrames || 0, clock: summary.navi?.clockMismatchFrames || 0 }),
+    arText("cap_line_worldpose", "worldPose: 적분 프레임 {integrated} · 최대 {max}", { integrated: summary.worldPose?.integratedFrames || 0, max: summary.worldPose?.maxIntegrations || 0 }),
+    arText("cap_line_deferred", "새 앵커 보류: {frames}프레임", { frames: summary.worldPose?.anchorCreationDeferredFrames || 0 }),
+    arText("cap_line_worker", "Worker: DPR 최대 {dpr} · 대기 {deferred} · 교체 {replaced} · 폐기 {discarded}", { dpr: finite(summary.transport?.maxDpr, 0).toFixed(2), deferred: summary.transport?.queue?.deferred || 0, replaced: summary.transport?.queue?.replaced || 0, discarded: summary.transport?.queue?.discarded || 0 }),
+    arText("cap_line_anchor", "앵커: x {x}m · y {y}m", { x: summary.anchorRange?.x?.join(" ~ ") || "—", y: summary.anchorRange?.y?.join(" ~ ") || "—" }),
+    arText("cap_line_flags", "플래그: {flags}", { flags: summary.flags?.length ? summary.flags.join(", ") : arText("dp_none", "없음") }),
+    ...countLines(arText("cap_group_markers", "마커 상태"), summary.markerStates, 10),
+    ...countLines(arText("cap_group_tracking", "주요 tracking 차단"), summary.reasons?.tracking),
+    ...countLines(arText("cap_group_sync", "주요 sync 차단"), summary.reasons?.sync),
+    ...countLines(arText("cap_group_deferred", "새 앵커 보류 사유"), summary.worldPose?.anchorCreationGateReasons),
+    ...countLines(arText("cap_group_events", "이벤트"), summary.eventTypes, 10),
   ];
   const representative = [];
   const perType = new Map();
@@ -610,7 +612,7 @@ export function formatArReplayDiagnosticReport(payload = {}) {
     perType.set(event.type, count + 1);
     representative.push(`- ${seconds(event.mediaTimeMs)} ${event.type}`);
   }
-  if (representative.length) lines.push("대표 이상 시각:", ...representative);
+  if (representative.length) lines.push(arText("cap_representative", "대표 이상 시각:"), ...representative);
   return lines.join("\n");
 }
 
@@ -790,11 +792,11 @@ export function createArReplayDiagnosticCapture(options = {}) {
     const runtime = target.CarrotVisionAr;
     const initial = control?.snapshot?.();
     if (!initial?.active || !initial?.ready || initial.loading) {
-      setPhase("error", "준비된 리플레이가 없습니다");
+      setPhase("error", arText("cap_no_replay", "준비된 리플레이가 없습니다"));
       return false;
     }
     if (typeof runtime?.subscribeDiagnostics !== "function") {
-      setPhase("error", "AR 프레임 진단 채널이 없습니다");
+      setPhase("error", arText("cap_no_channel", "AR 프레임 진단 채널이 없습니다"));
       return false;
     }
     const requested = Math.max(1, finite(settings.durationSeconds, AR_REPLAY_CAPTURE_SECONDS));
@@ -816,7 +818,7 @@ export function createArReplayDiagnosticCapture(options = {}) {
     if (control.seek?.(0) !== true) {
       clearResources();
       session = null;
-      setPhase("error", "리플레이 0초 이동에 실패했습니다");
+      setPhase("error", arText("cap_seek_failed", "리플레이 0초 이동에 실패했습니다"));
       return false;
     }
     monitor = interval?.(() => {
@@ -846,7 +848,7 @@ export function createArReplayDiagnosticCapture(options = {}) {
       clearResources();
       await control.restore?.(initial);
       session = null;
-      setPhase("error", cause?.message || "리플레이 재생에 실패했습니다");
+      setPhase("error", cause?.message || arText("cap_play_failed", "리플레이 재생에 실패했습니다"));
       return false;
     }
   }

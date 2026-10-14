@@ -10,6 +10,7 @@
  * 노면 SURFACE만 현재 road geometry를 직접 따라간다.
  */
 
+import { arText } from "./i18n.js";
 import {
   AR_HOLD_LIMITS,
   AR_HOLD_STATE,
@@ -444,9 +445,9 @@ export function createContinuousAnchorStore(options = {}) {
   let worldEpoch = null;
   let creationDeferredCount = 0;
   let creationGateReason = null;
-  let reason = "아직 유효한 앵커 없음";
+  let reason = arText("anchor_none_valid", "아직 유효한 앵커 없음");
 
-  function reset(nextReason = "초기화됨") {
+  function reset(nextReason = arText("anchor_initialized", "초기화됨")) {
     records = [];
     fixId = null;
     sourceId = null;
@@ -582,14 +583,14 @@ export function createContinuousAnchorStore(options = {}) {
       ? ""
       : creationDeferredCount
         ? `world anchor creation deferred: ${creationGateReason}`
-        : "새 fix에 배치 가능한 앵커 없음";
+        : arText("store_none_placeable", "새 fix에 배치 가능한 앵커 없음");
   }
 
   function update(input = {}) {
     const nowMs = finite(input.nowMs, 0);
     let dtMs = lastAtMs === null ? 0 : nowMs - lastAtMs;
     if (dtMs < 0) {
-      reset("시간 역행/replay seek");
+      reset(arText("store_time_rewind", "시간 역행/replay seek"));
       dtMs = 0;
     }
     lastAtMs = nowMs;
@@ -637,14 +638,14 @@ export function createContinuousAnchorStore(options = {}) {
           !sourceChanged && (!isProbe || (!trackingLost && !trackingRecovered)),
           { trackingState: input.trackingState, canHold: input.canHold },
         );
-        if (sourceChanged) reason = records.length ? "session 변경 — 이전 앵커 reset" : reason;
-        else if (trackingRecovered) reason = records.length ? "tracking 복구 — fresh fix 재정합" : reason;
+        if (sourceChanged) reason = records.length ? arText("store_session_changed", "session 변경 — 이전 앵커 reset") : reason;
+        else if (trackingRecovered) reason = records.length ? arText("store_tracking_recovered", "tracking 복구 — fresh fix 재정합") : reason;
         return result(nowMs);
       }
     }
 
     if (!records.length) {
-      if (!sourceValid) reason = input.reason || "source 무효 — 유지할 앵커 없음";
+      if (!sourceValid) reason = input.reason || arText("store_source_invalid", "source 무효 — 유지할 앵커 없음");
       return result(nowMs);
     }
     /* tracking lost가 곧 "앵커 폐기"는 아니다. route/geo 앵커는 새 Navi fix마다
@@ -673,7 +674,7 @@ export function createContinuousAnchorStore(options = {}) {
     if (dtMs > limits.maxStepMs && canPropagate) {
       state = AR_HOLD_STATE.HELD;
       mode = AR_ANCHOR_SOURCE_MODE.HELD;
-      reason = `프레임 간격 ${Math.round(dtMs)}ms — 앵커 유지, 적분 생략`;
+      reason = arText("anchor_frame_gap", "프레임 간격 {ms}ms — 앵커 유지, 적분 생략", { ms: Math.round(dtMs) });
       return result(nowMs);
     }
     // Once ego motion is untrusted, integrating a later sample would skip the
@@ -695,7 +696,7 @@ export function createContinuousAnchorStore(options = {}) {
         // tracking이 앵커를 놓은 이유가 있으면 그대로 남긴다(진단 패널이 읽는다).
         const why = input.trackingState === "lost" && input.reason ? String(input.reason) : "";
         reset(why
-          ? `${why} — ${Math.round(holdMs)}ms 후 앵커 해제`
+          ? arText("store_release_after", "{why} — {ms}ms 후 앵커 해제", { why, ms: Math.round(holdMs) })
           : `odometry untracked ${Math.round(holdMs)}ms - anchor dropped`);
         return result(nowMs);
       }
@@ -749,14 +750,14 @@ export function createContinuousAnchorStore(options = {}) {
       driftM = worstDrift;
       if (holdMs > limits.maxHoldMs || driftM > limits.maxDriftM) {
         const exceeded = holdMs > limits.maxHoldMs
-          ? `유지 시간 초과 (${limits.maxHoldMs}ms)`
-          : `누적 드리프트 ${driftM.toFixed(2)}m > ${limits.maxDriftM}m`;
+          ? arText("anchor_hold_timeout", "유지 시간 초과 ({ms}ms)", { ms: limits.maxHoldMs })
+          : arText("anchor_drift_exceeded", "누적 드리프트 {drift}m > {limit}m", { drift: driftM.toFixed(2), limit: limits.maxDriftM });
         reset(exceeded);
         return result(nowMs);
       }
       state = AR_HOLD_STATE.HELD;
       mode = AR_ANCHOR_SOURCE_MODE.HELD;
-      reason = `유지 중 ${Math.round(holdMs)}ms / 드리프트 ${driftM.toFixed(2)}m`;
+      reason = arText("anchor_holding", "유지 중 {ms}ms / 드리프트 {drift}m", { ms: Math.round(holdMs), drift: driftM.toFixed(2) });
     } else {
       holdMs = 0;
       driftM = 0;

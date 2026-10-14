@@ -15,6 +15,7 @@
  *   3D/Three.js 는 정합이 검증된 뒤 Phase 6 에서 올린다.
  */
 
+import { arText } from "./i18n.js";
 import { AR_LEGIBILITY, AR_OPACITY, paletteFor } from "./design_tokens.js";
 import { AR_GEOMETRY, AR_MARKER_FORM, AR_MARKER_KIND, markerForm } from "./tokens.js";
 
@@ -286,7 +287,7 @@ export function createArRenderer(options = {}) {
      * 표지가 깜빡인다. */
     const held = frame.held === true;
     if (!stage || (frame.sync?.canDrawPrecise !== true && !held)) {
-      stats.lastReason = frame.sync?.reasons?.[0] || "stage/sync 없음";
+      stats.lastReason = frame.sync?.reasons?.[0] || arText("render_no_stage_sync", "stage/sync 없음");
       return false;
     }
     stats.lastReason = "";
@@ -322,7 +323,7 @@ export function createArRenderer(options = {}) {
         stats.drawn += 1;
       } else {
         stats.skipped += 1;
-        stats.skips.push(`${item.descriptor?.kind}: 경로점 부족`);
+        stats.skips.push(arText("render_few_points", "{kind}: 경로점 부족", { kind: item.descriptor?.kind }));
       }
     }
 
@@ -355,11 +356,11 @@ export function createArRenderer(options = {}) {
       });
       if (!plan.visible) {
         stats.skipped += 1;
-        stats.skips.push(`${item.distanceM}m: 표시 억제(${plan.phase}/${plan.clamped}, ${Math.round(plan.projectedPx)}px)`);
+        stats.skips.push(arText("render_suppressed", "{d}m: 표시 억제({phase}/{clamped}, {px}px)", { d: item.distanceM, phase: plan.phase, clamped: plan.clamped, px: Math.round(plan.projectedPx) }));
         continue;
       }
       if (drawSign(item.descriptor, anchor, stage, plan, measured, held)) stats.drawn += 1;
-      else { stats.skipped += 1; stats.skips.push(`${item.distanceM}m: 그리기 실패`); }
+      else { stats.skipped += 1; stats.skips.push(arText("render_draw_failed", "{d}m: 그리기 실패", { d: item.distanceM })); }
     }
     return true;
   }

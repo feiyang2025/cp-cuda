@@ -1,5 +1,7 @@
 "use strict";
 
+import { arText } from "../i18n.js";
+
 /* 패널에 무엇을 어떤 순서로 보여줄지에 대한 유일한 선언.
  *
  * 패널(panel.js)은 이 배열만 보고 DOM을 만든다. 항목을 추가·삭제·재배치할 때
@@ -20,11 +22,11 @@ import { formatCanvasProbe, probeArCanvas } from "./dom_probe.js";
 export const AR_DEBUG_SECTIONS = Object.freeze([
   Object.freeze({
     id: "pipeline",
-    label: "파이프라인",
+    label: arText("fl_pipeline", "파이프라인"),
     fields: Object.freeze([
       Object.freeze({
         id: "counts",
-        label: "표지·앵커·그림",
+        label: arText("fl_signs", "표지·앵커·그림"),
         value: (s) => [
           num(s?.composition?.signCount, 0) ?? 0,
           num(s?.composition?.anchoredCount, 0) ?? 0,
@@ -52,7 +54,7 @@ export const AR_DEBUG_SECTIONS = Object.freeze([
   }),
   Object.freeze({
     id: "compose",
-    label: "앵커 입력",
+    label: arText("fl_anchor_input", "앵커 입력"),
     fields: Object.freeze([
       Object.freeze({
         id: "gate",
@@ -62,14 +64,14 @@ export const AR_DEBUG_SECTIONS = Object.freeze([
       }),
       Object.freeze({
         id: "anchor",
-        label: "첫 앵커",
+        label: arText("fl_first_anchor", "첫 앵커"),
         value: (s) => anchorSample(s?.hold?.sample),
       }),
     ]),
   }),
   Object.freeze({
     id: "render",
-    label: "렌더 경로",
+    label: arText("fl_render_path", "렌더 경로"),
     fields: Object.freeze([
       Object.freeze({ id: "renderer", label: "renderer", value: (s) => rendererLine(s), wide: true }),
       Object.freeze({ id: "canvas", label: "canvas", value: (s) => canvasLine(s) }),
@@ -91,21 +93,21 @@ export const AR_DEBUG_SECTIONS = Object.freeze([
       Object.freeze({
         // 워커가 "그렸다"고 해도 캔버스가 0 크기거나 덮여 있으면 화면엔 없다.
         id: "surface",
-        label: "표면",
+        label: arText("fl_surface", "표면"),
         value: () => formatCanvasProbe(probeArCanvas()),
         tone: () => {
           const p = probeArCanvas();
           if (!p?.rect) return TONE.WARN;
           const hidden = p.style.display === "none" || p.style.visibility === "hidden"
             || Number(p.style.opacity) === 0;
-          const covered = p.coveredBy && p.coveredBy !== "없음";
+          const covered = p.coveredBy && p.coveredBy !== arText("dp_none", "없음");
           return (!hidden && p.rect.w > 0 && p.rect.h > 0 && !covered) ? TONE.OK : TONE.WARN;
         },
         wide: true,
       }),
       Object.freeze({
         id: "calibration",
-        label: "보정",
+        label: arText("fl_calibration", "보정"),
         value: (s, d) => calibrationLine(s, d),
         tone: (s) => (s?.sync?.calibrationPlausible === true ? TONE.OK : TONE.WARN),
       }),
@@ -113,7 +115,7 @@ export const AR_DEBUG_SECTIONS = Object.freeze([
   }),
   Object.freeze({
     id: "clock",
-    label: "시계",
+    label: arText("fl_clock", "시계"),
     fields: Object.freeze([
       Object.freeze({
         id: "presented",
@@ -124,12 +126,12 @@ export const AR_DEBUG_SECTIONS = Object.freeze([
       Object.freeze({ id: "timeline", label: "timeline", value: (s) => timelineLine(s) }),
       Object.freeze({ id: "world", label: "worldPose", value: (s) => worldPoseLine(s) }),
       Object.freeze({ id: "odoTimeline", label: "odometry", value: (s) => odometryTimelineLine(s) }),
-      Object.freeze({ id: "frameSignal", label: "frame신호", value: (s, d) => frameSignalLine(d), wide: true }),
+      Object.freeze({ id: "frameSignal", label: arText("fl_frame_signal", "frame신호"), value: (s, d) => frameSignalLine(d), wide: true }),
     ]),
   }),
   Object.freeze({
     id: "sources",
-    label: "소스",
+    label: arText("fl_source", "소스"),
     fields: Object.freeze([
       Object.freeze({ id: "frames", label: "frameId", value: (s, d) => sourceFrames(s, d) }),
       Object.freeze({ id: "ages", label: "age(ms)", value: (s) => sourceAges(s) }),
@@ -144,18 +146,18 @@ export const AR_DEBUG_SECTIONS = Object.freeze([
   }),
   Object.freeze({
     id: "quality",
-    label: "위치 품질",
+    label: arText("fl_position_quality", "위치 품질"),
     fields: Object.freeze([
-      Object.freeze({ id: "pq", label: "판정", value: (s) => positionQualityLine(s), wide: true }),
-      Object.freeze({ id: "pqReason", label: "사유", value: (s) => positionQualityReason(s), wide: true }),
+      Object.freeze({ id: "pq", label: arText("fl_verdict", "판정"), value: (s) => positionQualityLine(s), wide: true }),
+      Object.freeze({ id: "pqReason", label: arText("fl_reason", "사유"), value: (s) => positionQualityReason(s), wide: true }),
     ]),
   }),
   Object.freeze({
     id: "runtime",
-    label: "런타임",
+    label: arText("fl_runtime", "런타임"),
     fields: Object.freeze([
-      Object.freeze({ id: "perf", label: "성능", value: (s) => performanceLine(s), wide: true }),
-      Object.freeze({ id: "replay", label: "리플레이", value: (s, d) => replayLine(d), wide: true }),
+      Object.freeze({ id: "perf", label: arText("fl_performance", "성능"), value: (s) => performanceLine(s), wide: true }),
+      Object.freeze({ id: "replay", label: arText("fl_replay", "리플레이"), value: (s, d) => replayLine(d), wide: true }),
     ]),
   }),
 ]);

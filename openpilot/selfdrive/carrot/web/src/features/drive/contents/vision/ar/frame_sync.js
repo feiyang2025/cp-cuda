@@ -12,6 +12,7 @@
  * "시간" 기준으로도 검사할 수 있다.
  */
 
+import { arText } from "./i18n.js";
 import {
   CAMERA_ODOMETRY_POSE_DELAY_MS,
   cameraOdometryObservationTimestampNs,
@@ -199,7 +200,7 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
 
   if (!cam || !model) {
     return Object.freeze({
-      state: AR_SYNC_STATE.MISSING, reasons: Object.freeze(["camera/model 없음"]),
+      state: AR_SYNC_STATE.MISSING, reasons: Object.freeze([arText("sync_no_camera", "camera/model 없음")]),
       frameIdGap: null, modelAgeMs: null, odometryAgeMs: null, odometryUsable: false,
       poseAgeMs: null, calibrationAgeMs: null, naviAgeMs: null,
       poseOk: false, calibrated: false, calibrationPlausible: false, naviUsable: false,
@@ -220,7 +221,7 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
   let frameState = AR_SYNC_STATE.OK;
   if (frameIdGap === null) {
     frameState = AR_SYNC_STATE.MISSING;
-    reasons.push("frameId 없음");
+    reasons.push(arText("sync_no_frame_id", "frameId 없음"));
   } else if (frameIdGap > limits.maxFrameIdGap) {
     frameState = AR_SYNC_STATE.FRAME_GAP;
     reasons.push(`frame gap ${frameIdGap} > ${limits.maxFrameIdGap}`);
@@ -240,7 +241,7 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
   let modelState = AR_SYNC_STATE.OK;
   if (!replayClock && modelReceiptAgeMs === null) {
     modelState = AR_SYNC_STATE.MISSING;
-    reasons.push("model 수신시각 없음");
+    reasons.push(arText("sync_no_model_ts", "model 수신시각 없음"));
   } else if (modelAgeMs > limits.maxModelAgeMs) {
     modelState = AR_SYNC_STATE.STALE;
     reasons.push(`model age ${modelAgeMs.toFixed(0)}ms`);
@@ -277,14 +278,14 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
     const stdOk = (velAngleStd === null || velAngleStd <= limits.maxVelAngleStd)
       && (rotStd === null || rotStd <= limits.maxRotStd);
     const plausible = isOdometryPlausible(odo);
-    if (!plausible) reasons.push("odometry 값이 비정상 — 디코드 오프셋 의심");
+    if (!plausible) reasons.push(arText("sync_odometry_implausible", "odometry 값이 비정상 — 디코드 오프셋 의심"));
     odometryUsable = ageOk && gapOk && stdOk && plausible;
-    if (!replayClock && odometryReceiptAgeMs === null) reasons.push("odometry 수신시각 없음");
+    if (!replayClock && odometryReceiptAgeMs === null) reasons.push(arText("sync_no_odometry_ts", "odometry 수신시각 없음"));
     else if (!ageOk) reasons.push(`odometry age ${odometryAgeMs.toFixed(0)}ms`);
     if (!gapOk) reasons.push(`odometry frame gap ${odoGap}`);
     if (!stdOk) {
       const deg = velAngleStd === null ? "n/a" : `${(velAngleStd * 180 / Math.PI).toFixed(3)}°`;
-      reasons.push(`odometry 불확실 velAngleStd=${deg} rotStd=${rotStd?.toFixed(4)}`);
+      reasons.push(arText("sync_odometry_uncertain", "odometry 불확실 velAngleStd={deg} rotStd={rot}", { deg, rot: rotStd?.toFixed(4) }));
     }
   }
 
@@ -299,9 +300,9 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
       ? null
       : Math.max(poseReceiptAgeMs, Math.abs(poseSourceAgeMs ?? 0));
   const posePlausible = Boolean(pose) && isPosePlausible(pose);
-  if (pose && !posePlausible) reasons.push("livePose 값이 비정상 — 디코드 오프셋 의심");
-  if (!pose) reasons.push("livePose 없음");
-  if (!replayClock && poseReceiptAgeMs === null) reasons.push("livePose 수신시각 없음");
+  if (pose && !posePlausible) reasons.push(arText("sync_livepose_implausible", "livePose 값이 비정상 — 디코드 오프셋 의심"));
+  if (!pose) reasons.push(arText("sync_no_livepose", "livePose 없음"));
+  if (!replayClock && poseReceiptAgeMs === null) reasons.push(arText("sync_no_livepose_ts", "livePose 수신시각 없음"));
   else if (poseAgeMs > limits.maxPoseAgeMs) reasons.push(`livePose age ${poseAgeMs.toFixed(0)}ms`);
   const poseOk = posePlausible
     && pose.inputsOK === true
@@ -309,22 +310,22 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
     && pose.sensorsOK !== false
     && poseAgeMs !== null
     && poseAgeMs <= limits.maxPoseAgeMs;
-  if (pose && posePlausible && !poseOk) reasons.push("livePose 품질/상태 not OK");
+  if (pose && posePlausible && !poseOk) reasons.push(arText("sync_livepose_quality", "livePose 품질/상태 not OK"));
 
   // 5) calibration — 정밀 앵커는 calibrated 일 때만.
   // 주의: 값의 형태가 경로마다 다르다. 라이브 compact 는 enum 이름("calibrated"),
   // 리플레이(raw_capnp)는 values 목록이 없어 숫자(1)로 온다. 둘 다 받는다.
   const calibrated = isCalibrated(cal?.calStatus);
-  if (!calibrated) reasons.push(`calStatus=${cal?.calStatus ?? "없음"}`);
+  if (!calibrated) reasons.push(arText("sync_cal_status", "calStatus={status}", { status: cal?.calStatus ?? arText("dp_none", "없음") }));
   const calibrationPlausible = isCalibrationPlausible(cal);
-  if (!calibrationPlausible) reasons.push("calibration rpy 비정상/누락");
+  if (!calibrationPlausible) reasons.push(arText("sync_cal_rpy", "calibration rpy 비정상/누락"));
   const calibrationAgeMs = replayClock
     ? (cal ? 0 : null)
     : serviceReceiptAgeMs(nowMs, receipts, "liveCalibration");
   let calibrationState = AR_SYNC_STATE.OK;
   if (calibrationAgeMs === null) {
     calibrationState = AR_SYNC_STATE.MISSING;
-    reasons.push("calibration 수신시각 없음");
+    reasons.push(arText("sync_no_cal_ts", "calibration 수신시각 없음"));
   } else if (calibrationAgeMs > limits.maxCalibrationAgeMs) {
     calibrationState = AR_SYNC_STATE.STALE;
     reasons.push(`calibration age ${calibrationAgeMs.toFixed(0)}ms`);
@@ -351,10 +352,10 @@ export function evaluateFrameSync(input = {}, limits = AR_SYNC_LIMITS) {
     // 꺼지지만 안내가 활성(또는 경로 존재)이면 표지 데이터는 유효하다. connected는
     // 요구하지 않고, off-route와 신선도(fresh)만 실제 차단 조건으로 둔다.
     naviUsable = (active || routePresent) && !offRoute && fresh;
-    if (!replayClock && naviReceiptAgeMs === null) reasons.push("navi 수신시각 없음");
+    if (!replayClock && naviReceiptAgeMs === null) reasons.push(arText("sync_no_navi_ts", "navi 수신시각 없음"));
     else if (!fresh) reasons.push(`navi age ${naviAgeMs.toFixed(0)}ms`);
     if ((!active && !routePresent) || offRoute) {
-      reasons.push("navi off-route/안내없음");
+      reasons.push(arText("sync_navi_offroute", "navi off-route/안내없음"));
     }
   }
 
