@@ -133,13 +133,10 @@ if [ "$(uname -m)" = "aarch64" ] && [ ! -e /TICI ]; then
   fi
   pgrep -f "[s]erial_imu" > /dev/null && echo "[sensor] serial IMU running" || echo "[sensor] WARNING: serial IMU NOT running"
 
-  # 4G-module GPS (NMEA on /dev/ttyUSB1) -> gpsLocationExternal.
-  if ! pgrep -f "[s]erial_gps" > /dev/null 2>&1; then
-    echo "[sensor] starting serial GPS bridge"
-    nohup "$DIR/.venv/bin/python" "$DIR/tools/sim/serial_gps.py" > /tmp/serial_gps.log 2>&1 &
-    sleep 1
-  fi
-  pgrep -f "[s]erial_gps" > /dev/null && echo "[sensor] serial GPS running" || echo "[sensor] WARNING: serial GPS NOT running"
+  # 4G-module GPS (SIM7600 NMEA on /dev/ttyUSB1) 现由 manager 管理
+  # (process_config: serial_gps, 随 OP 启停 + 退出时 AT+CGPS=0), 这里不再 nohup 起。
+  # 清掉可能残留的旧 nohup 实例, 避免和 manager 起的抢 /dev/ttyUSB1。
+  pkill -f "[t]ools/sim/serial_gps.py" 2>/dev/null || true
 fi
 
 exec ./launch_chffrplus.sh

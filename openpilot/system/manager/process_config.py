@@ -215,4 +215,10 @@ procs = [
 procs += [NativeProcess("sensord_ch347", "openpilot/system/sensord",
               ["bash", "run_ch347t.sh"],
               always_run, enabled=PC, sigkill=False)]
+
+# 4G-module GPS bridge (SIM7600 NMEA on /dev/ttyUSB1 -> gpsLocationExternal).
+# 随 OP 启停: 启动时 AT+CGPS=1 开 GNSS, 退出(SIGINT)时 AT+CGPS=0 关 GNSS。
+procs += [NativeProcess("serial_gps", ".",
+              [".venv/bin/python", "tools/sim/serial_gps.py"],
+              always_run, enabled=PC, sigkill=False)]
 managed_processes = {p.name: p for p in procs}
