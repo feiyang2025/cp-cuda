@@ -22,8 +22,8 @@ CACHE_TTL = 2.0
 # 与 camera.py 模块级构造 imx390 配置时用的同一组参数 (见 camera.py 中
 # `_imx390_fcam` / `_imx390_ecam`): (宽度 env 键, 高度 env 键, 兜底焦距, Params 键)。
 # 单位是 1920x1080 基分辨率下的像素焦距, 由 _camera_config_from_params 按实际宽度缩放。
-_ROAD_ARGS = (("ROAD_CAM_WIDTH", "CAM_WIDTH"), ("ROAD_CAM_HEIGHT", "CAM_HEIGHT"), 1740.0, "FcamIntrinsics")
-_WIDE_ARGS = (("WIDE_CAM_WIDTH", "CAM_WIDTH"), ("WIDE_CAM_HEIGHT", "CAM_HEIGHT"), 961.76, "EcamIntrinsics")
+_ROAD_ARGS = (("ROAD_CAM_WIDTH", "CAM_WIDTH"), ("ROAD_CAM_HEIGHT", "CAM_HEIGHT"), 961.76, "FcamIntrinsics")
+_WIDE_ARGS = (("WIDE_CAM_WIDTH", "CAM_WIDTH"), ("WIDE_CAM_HEIGHT", "CAM_HEIGHT"), 1740.0, "EcamIntrinsics")
 
 
 @dataclass(frozen=True)

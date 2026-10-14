@@ -150,18 +150,18 @@ DEVICE_CAMERAS.update({(d, c[0]): c[1] for d, c in prods})
 
 
 # ---- AGX Orin + Sensing/twgmsl IMX390 GMSL dual camera (PC webcamerad path) ----
-#   本机实测 (2026-10-12): 两路同场景 ORB 尺度比 road/wide = 1.735 (理论 1740/961.76=1.81)
-#     /dev/video0 = "twgmsl 9-0028" = 60° 窄角  → 暴露为 road (fcam)，厂商标定 fl≈1740.0 @1920x1080
-#     /dev/video1 = "twgmsl 9-002a" = 120° 广角 → 暴露为 wide (ecam)，厂商标定 pinhole fl≈961.76 @1920x1080
-#   (sp-cuda 2026-08-30 厂商标定是同一对数字: 961.76 = 120° 那只、1740 = 60° 那只。
-#    早期本树把这两个数字按流套反了 —— 用 120° 的焦距去 warp 60° 的画面, 两路内参都偏 ~1.8 倍。)
+#   与 sp-cuda 一致 (同一套硬件/接线):
+#     /dev/video0 = "twgmsl 9-0028" = 120° 广角  → 暴露为 road (fcam)，厂商标定 pinhole fl≈961.76 @1920x1080
+#     /dev/video1 = "twgmsl 9-002a" = 60° 窄角   → 暴露为 wide (ecam)，厂商标定 fl≈1740.0 @1920x1080
+#   2026-10-14: 本树此前把这两个焦距按流套反了 (road 用 60° 的 1740, wide 用 120° 的 961.76),
+#   两路内参都偏 ~1.8 倍, 现按 sp-cuda 的厂商标定纠正。
 # Live values are stored in the FcamIntrinsics / EcamIntrinsics Params
 # (resolution-keyed JSON written by tools/calib/*); the numbers below are the
 # fallback used the first time those Params are created.
 # camerad's roadCameraState.sensor enum cannot report imx390, so the ("pc",
 # "unknown") entry is replaced instead - the PC path only hits this one entry.
-_imx390_fcam = _camera_config_from_params(("ROAD_CAM_WIDTH", "CAM_WIDTH"), ("ROAD_CAM_HEIGHT", "CAM_HEIGHT"), 1740.0, "FcamIntrinsics")
-_imx390_ecam = _camera_config_from_params(("WIDE_CAM_WIDTH", "CAM_WIDTH"), ("WIDE_CAM_HEIGHT", "CAM_HEIGHT"), 961.76, "EcamIntrinsics")
+_imx390_fcam = _camera_config_from_params(("ROAD_CAM_WIDTH", "CAM_WIDTH"), ("ROAD_CAM_HEIGHT", "CAM_HEIGHT"), 961.76, "FcamIntrinsics")
+_imx390_ecam = _camera_config_from_params(("WIDE_CAM_WIDTH", "CAM_WIDTH"), ("WIDE_CAM_HEIGHT", "CAM_HEIGHT"), 1740.0, "EcamIntrinsics")
 DEVICE_CAMERAS[("pc", "unknown")] = DeviceCameraConfig(_imx390_fcam, _imx390_ecam, _imx390_ecam)
 
 # ---- AGX 移植兼容: DeviceCameraConfig 的两代字段名 ----

@@ -45,11 +45,12 @@ OIV7_CLASS_NAMES = ["Barrel", "Box", "Traffic sign", "Traffic light", "Bicycle",
                     "Cat", "Dog", "Horse", "Cow", "Sheep", "Person"]
 INTEREST_CLASSES = COCO_CLASSES  # 默认 COCO(向下兼容)
 
-# 相机内参: 本机 road 流 = 60° 窄角相机 (1740 @1920 → 1344 宽下 1218.0)。
-# 旧值 2508.0 是 J501 参考机的 30° 长焦, 用在本机会把测距整体放大 ~2 倍。
+# 相机内参: 本机 road 流 = 120° 广角相机 (961.76 @1920 → 1344 宽下 673.23)。
+# 2026-10-14 与 sp-cuda 对齐: road 流是 120° 那只 (fl 961.76@1920);
+# 旧值 1218.0 (按 60°) / 2508.0 (J501 30°) 都会把测距整体放大。
 CAM_W = 1344
 CAM_H = 760
-ROAD_FOCAL = 1218.0
+ROAD_FOCAL = 673.23
 CY = CAM_H / 2.0
 
 MIN_DETECT_DREL_M = 2.0    # 最近检测距离

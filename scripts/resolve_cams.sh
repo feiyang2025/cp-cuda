@@ -2,16 +2,16 @@
 # resolve_cams.sh — 按 v4l2 设备名解析摄像头节点号并输出 export 语句。
 # v4l2 节点号(/dev/videoN)会随 USB 枚举/GMSL 驱动加载顺序漂移,不能硬编码。
 # 设备名(来自 /sys/class/video4linux/videoN/name):
-#   twgmsl 9-0028 -> GMSL 60° 窄角(远距离主相机)
-#   twgmsl 9-002a -> GMSL 120° 广角(近距离超广角)
+#   twgmsl 9-0028 -> GMSL 120° 广角(主路 road, video0)
+#   twgmsl 9-002a -> GMSL 60° 窄角(wide, video1)
 #   USB Camera    -> USB IMX678 90°(稳定中距离/后备)
 # 视场标签来源: sp-cuda 厂商标定 (120° 那只 pinhole fl≈961.76, 60° 那只 fl=1740)
-#   与本机实测 (2026-10-12, 两路同场景 ORB 尺度比 1.735 与 1740/961.76=1.81 吻合)。
+#   2026-10-14 与 sp-cuda 对齐: 9-0028 = 120°(road), 9-002a = 60°(wide)。
 # 输出: export ROAD_CAM='N' 等(与 launch_env.sh 的用法一致)
 #
 # 容错优先级:
-#   ROAD   = 60°(若死则用 USB)
-#   WIDE   = 120°(若死则用 60°;再不行用 USB)
+#   ROAD   = 120°(若死则用 USB)
+#   WIDE   = 60°(若死则用 120°;再不行用 USB)
 #   DRIVER = USB(仅当 ROAD 已由 60° 承担时;ROAD 用了 USB 则 DRIVER 留空)
 
 find_by_name() {
@@ -34,13 +34,13 @@ ROAD=""
 WIDE=""
 DRIVER=""
 
-# 30° 窄角优先做主路(远距离)
+# 120° 广角做主路(与 sp-cuda 一致)
 if [ -n "$CAM30" ]; then
   ROAD="$CAM30"
 else
   ROAD="$CAMUSB"
 fi
-# 196° 鱼眼优先做 wide(近距离)
+# 60° 窄角做 wide
 if [ -n "$CAM196" ]; then
   WIDE="$CAM196"
 elif [ -n "$CAM30" ] && [ "$CAM30" != "$ROAD" ]; then
