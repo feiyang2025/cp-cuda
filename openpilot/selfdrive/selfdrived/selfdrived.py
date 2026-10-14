@@ -443,9 +443,9 @@ class SelfdriveD:
         self.events.add(EventName.commIssue)
 
       logs = {
-        'invalid': [s for s, valid in self.sm.valid.items() if not valid],
-        'not_alive': [s for s, alive in self.sm.alive.items() if not alive],
-        'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
+        'invalid': [s for s, valid in self.sm.valid.items() if not valid and s not in self.sm.ignore_valid],
+        'not_alive': [s for s, alive in self.sm.alive.items() if not alive and s not in self.sm.ignore_alive],
+        'not_freq_ok': [s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok and s not in self.sm.ignore_average_freq],
       }
       if logs != self.logged_comm_issue:
         services = list(dict.fromkeys(logs['not_freq_ok'] + logs['not_alive'] + logs['invalid'] +
@@ -549,9 +549,9 @@ class SelfdriveD:
           dt=self.sm.frame*DT_CTRL,
           timeout=timed_out,
           canValid=CS.canValid,
-          invalid=[s for s, valid in self.sm.valid.items() if not valid],
-          not_alive=[s for s, alive in self.sm.alive.items() if not alive],
-          not_freq_ok=[s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok],
+          invalid=[s for s, valid in self.sm.valid.items() if not valid and s not in self.sm.ignore_valid],
+          not_alive=[s for s, alive in self.sm.alive.items() if not alive and s not in self.sm.ignore_alive],
+          not_freq_ok=[s for s, freq_ok in self.sm.freq_ok.items() if not freq_ok and s not in self.sm.ignore_average_freq],
           error=True,
         )
 
